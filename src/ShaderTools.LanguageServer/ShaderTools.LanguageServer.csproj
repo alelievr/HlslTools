@@ -11,6 +11,11 @@
     <PackageReference Include="OmniSharp.Extensions.LanguageServer" Version="0.18.3" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="3.0.1" />
     <PackageReference Include="Serilog.Sinks.File" Version="4.1.0" />
+    <!-- Pin transitive System.* packages to avoid an NU1605 package-downgrade error pulled in via
+         Serilog.Sinks.File -> System.IO.FileSystem. These are part of the net6.0 shared framework, so
+         the explicit references are harmless and just settle version resolution. -->
+    <PackageReference Include="System.IO.FileSystem" Version="4.3.0" />
+    <PackageReference Include="System.Runtime.Handles" Version="4.3.0" />
     <PackageReference Include="System.IO.FileSystem.Primitives" Version="4.3.0" />
     <PackageReference Include="System.Text.Encoding.Extensions" Version="4.3.0" />
   </ItemGroup>

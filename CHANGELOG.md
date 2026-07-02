@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- [x] Support the DXC 32-bit explicit-width scalar types `uint32_t`, `int32_t` and `float32_t` (and their vector/matrix forms), as aliases for `uint`/`int`/`float`.
+- [x] Fix a crash in the VS Code language server where hovering over a location with no quick info returned an empty hover, crashing the client's hover converter.
+- [x] Support `#pragma once` - a file guarded with `#pragma once` is now only processed once per parse, no matter how many times (or via which path) it is `#include`d.
+- [x] Add Shader Model 6.5 wave intrinsics: `WaveMatch`, `WaveMultiPrefixSum`, `WaveMultiPrefixProduct`, `WaveMultiPrefixBitAnd`, `WaveMultiPrefixBitOr`, `WaveMultiPrefixBitXor`, `WaveMultiPrefixCountBits`.
+- [x] Add full DirectX Raytracing (DXR) support:
+  - `TraceRay`, `CallShader` and `ReportHit` intrinsics, which accept a user-defined payload/attribute struct.
+  - The `RayQuery<RAY_FLAGS>` type (inline raytracing) with its full method set (`TraceRayInline`, `Proceed`, `CommittedStatus`, `Candidate*`/`Committed*` accessors, etc.).
+  - Predefined raytracing constants: `RAY_FLAG_*`, `COMMITTED_*`, `CANDIDATE_*` and `HIT_KIND_*`.
+  - The `[shader("...")]` and `[maxrecursiondepth(...)]` entry-point attributes.
+
 ## 1.1.300
 
 **2019-11-21**

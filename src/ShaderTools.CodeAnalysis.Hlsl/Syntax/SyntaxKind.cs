@@ -345,6 +345,7 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Syntax
         RasterizerOrderedTexture2DArrayKeyword,
         RasterizerOrderedTexture3DKeyword,
         RasterizerStateKeyword,
+        RayQueryKeyword,
         RegisterKeyword,
         ReturnKeyword,
         RowMajorKeyword,

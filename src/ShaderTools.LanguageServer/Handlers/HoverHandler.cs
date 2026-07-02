@@ -55,7 +55,10 @@ namespace ShaderTools.LanguageServer.Handlers
             }
             else
             {
-                return new Hover();
+                // No quick info at this position. Return null (no hover) rather than an empty Hover:
+                // an empty Hover has null Contents, which crashes the LSP client's hover converter
+                // (TypeError: Cannot read properties of null (reading 'kind')).
+                return null;
             }
         }
 

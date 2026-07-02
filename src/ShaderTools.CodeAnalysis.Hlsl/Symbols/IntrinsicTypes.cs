@@ -100,6 +100,15 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Symbols
         public static readonly IntrinsicObjectTypeSymbol BuiltInTriangleIntersectionAttributes;
         public static readonly IntrinsicObjectTypeSymbol RayDesc;
         public static readonly IntrinsicObjectTypeSymbol RaytracingAccelerationStructure;
+        public static readonly IntrinsicObjectTypeSymbol RayQuery;
+
+        /// <summary>
+        /// A placeholder type used only for intrinsic parameters that accept any user-defined type,
+        /// e.g. the ray payload of <c>TraceRay</c>, the parameter of <c>CallShader</c>, or the
+        /// attributes of <c>ReportHit</c>. It is implicitly convertible to and from any type - see
+        /// <see cref="TypeFacts.HasImplicitConversionTo"/>.
+        /// </summary>
+        public static readonly IntrinsicObjectTypeSymbol Template = new IntrinsicObjectTypeSymbol("<any>", "Represents any user-defined type.", PredefinedObjectType.Texture);
 
         public static readonly TypeSymbol[] AllTypes;
 
@@ -435,13 +444,15 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Symbols
             RayDesc.AddMember(new FieldSymbol("Direction", "The direction of the ray.", RayDesc, Float3));
             RayDesc.AddMember(new FieldSymbol("TMax", "The maximum extent of the ray.", RayDesc, Float));
 
+            RayQuery = CreateRayQueryType();
+
             AllTypes = AllNumericTypes
                 .Cast<TypeSymbol>()
                 .Union(new[] { Sampler, Sampler1D, Sampler2D, Sampler3D, SamplerCube, SamplerState, SamplerComparisonState, LegacyTexture })
                 .Union(new[] { BlendState, DepthStencilState, RasterizerState })
                 .Union(new[] { GeometryShader, PixelShader, VertexShader })
                 .Union(new[] { ByteAddressBuffer, RWByteAddressBuffer, RasterizerOrderedByteAddressBuffer })
-                .Union(new[] { BuiltInTriangleIntersectionAttributes, RayDesc, RaytracingAccelerationStructure })
+                .Union(new[] { BuiltInTriangleIntersectionAttributes, RayDesc, RaytracingAccelerationStructure, RayQuery })
                 .ToArray();
         }
 
@@ -1433,6 +1444,82 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Symbols
             var result = new IntrinsicObjectTypeSymbol(name, documentation, predefinedObjectType);
             result.AddMembers(membersCallback(result));
             return result;
+        }
+
+        private static IntrinsicObjectTypeSymbol CreateRayQueryType()
+        {
+            return CreatePredefinedObjectType("RayQuery",
+                "Enables inline ray tracing, allowing arbitrary shaders to trace rays along the data flow of the calling shader without invoking separate ray tracing shaders. (Requires shader model 6.5.)",
+                PredefinedObjectType.RayQuery,
+                t =>
+                {
+                    // Helper for the many parameterless accessor methods on RayQuery.
+                    FunctionSymbol Method(string name, string documentation, TypeSymbol returnType)
+                        => new FunctionSymbol(name, documentation, t, returnType, m => Enumerable.Empty<ParameterSymbol>());
+
+                    return new Symbol[]
+                    {
+                        new FunctionSymbol("TraceRayInline",
+                            "Begins a ray query against the given acceleration structure for the given ray.", t, Void,
+                            m => new[]
+                            {
+                                new ParameterSymbol("accelerationStructure", "The top-level acceleration structure to traverse.", m, RaytracingAccelerationStructure),
+                                new ParameterSymbol("rayFlags", "A combination of RAY_FLAG values, combined with the template flags of the RayQuery object.", m, Uint),
+                                new ParameterSymbol("instanceInclusionMask", "The bottom 8 bits define an instance mask used to include or reject geometry instances.", m, Uint),
+                                new ParameterSymbol("ray", "A RayDesc representing the ray to be traced.", m, RayDesc)
+                            }),
+                        Method("Proceed", "Advances the ray query to the next candidate hit, if any. Returns true while traversal is incomplete.", Bool),
+                        Method("Abort", "Aborts the ray query.", Void),
+                        Method("CommitNonOpaqueTriangleHit", "Commits the current non-opaque triangle candidate as a hit.", Void),
+                        new FunctionSymbol("CommitProceduralPrimitiveHit",
+                            "Commits the current procedural primitive candidate as a hit at the given parametric distance.", t, Void,
+                            m => new[]
+                            {
+                                new ParameterSymbol("tHit", "The parametric distance of the intersection.", m, Float)
+                            }),
+
+                        Method("CandidateType", "Returns the type (CANDIDATE_TYPE) of the current candidate hit.", Uint),
+                        Method("CommittedStatus", "Returns the kind (COMMITTED_STATUS) of the current committed hit.", Uint),
+
+                        Method("RayFlags", "Returns the ray flags the query was created with, combined with the TraceRayInline flags.", Uint),
+                        Method("WorldRayOrigin", "Returns the world-space origin of the ray.", Float3),
+                        Method("WorldRayDirection", "Returns the world-space direction of the ray.", Float3),
+                        Method("RayTMin", "Returns the parametric starting point for the ray.", Float),
+
+                        // Candidate (current potential hit) accessors.
+                        Method("CandidateTriangleRayT", "Returns the parametric distance of the current triangle candidate.", Float),
+                        Method("CandidateInstanceIndex", "Returns the instance index of the current candidate.", Uint),
+                        Method("CandidateInstanceID", "Returns the user-provided InstanceID of the current candidate.", Uint),
+                        Method("CandidateInstanceContributionToHitGroupIndex", "Returns the instance contribution to the hit group index of the current candidate.", Uint),
+                        Method("CandidateGeometryIndex", "Returns the geometry index of the current candidate.", Uint),
+                        Method("CandidatePrimitiveIndex", "Returns the primitive index of the current candidate.", Uint),
+                        Method("CandidateObjectRayOrigin", "Returns the object-space origin of the ray for the current candidate.", Float3),
+                        Method("CandidateObjectRayDirection", "Returns the object-space direction of the ray for the current candidate.", Float3),
+                        Method("CandidateObjectToWorld3x4", "Returns the object-to-world transform for the current candidate.", GetMatrixType(ScalarType.Float, 3, 4)),
+                        Method("CandidateObjectToWorld4x3", "Returns the object-to-world transform for the current candidate.", GetMatrixType(ScalarType.Float, 4, 3)),
+                        Method("CandidateWorldToObject3x4", "Returns the world-to-object transform for the current candidate.", GetMatrixType(ScalarType.Float, 3, 4)),
+                        Method("CandidateWorldToObject4x3", "Returns the world-to-object transform for the current candidate.", GetMatrixType(ScalarType.Float, 4, 3)),
+                        Method("CandidateProceduralPrimitiveNonOpaque", "Returns whether the current procedural primitive candidate is non-opaque.", Bool),
+                        Method("CandidateTriangleFrontFace", "Returns whether the current triangle candidate is front facing.", Bool),
+                        Method("CandidateTriangleBarycentrics", "Returns the barycentric coordinates of the current triangle candidate.", Float2),
+
+                        // Committed (closest accepted hit) accessors.
+                        Method("CommittedRayT", "Returns the parametric distance of the committed hit.", Float),
+                        Method("CommittedInstanceIndex", "Returns the instance index of the committed hit.", Uint),
+                        Method("CommittedInstanceID", "Returns the user-provided InstanceID of the committed hit.", Uint),
+                        Method("CommittedInstanceContributionToHitGroupIndex", "Returns the instance contribution to the hit group index of the committed hit.", Uint),
+                        Method("CommittedGeometryIndex", "Returns the geometry index of the committed hit.", Uint),
+                        Method("CommittedPrimitiveIndex", "Returns the primitive index of the committed hit.", Uint),
+                        Method("CommittedObjectRayOrigin", "Returns the object-space origin of the ray for the committed hit.", Float3),
+                        Method("CommittedObjectRayDirection", "Returns the object-space direction of the ray for the committed hit.", Float3),
+                        Method("CommittedObjectToWorld3x4", "Returns the object-to-world transform for the committed hit.", GetMatrixType(ScalarType.Float, 3, 4)),
+                        Method("CommittedObjectToWorld4x3", "Returns the object-to-world transform for the committed hit.", GetMatrixType(ScalarType.Float, 4, 3)),
+                        Method("CommittedWorldToObject3x4", "Returns the world-to-object transform for the committed hit.", GetMatrixType(ScalarType.Float, 3, 4)),
+                        Method("CommittedWorldToObject4x3", "Returns the world-to-object transform for the committed hit.", GetMatrixType(ScalarType.Float, 4, 3)),
+                        Method("CommittedTriangleFrontFace", "Returns whether the committed triangle hit is front facing.", Bool),
+                        Method("CommittedTriangleBarycentrics", "Returns the barycentric coordinates of the committed triangle hit.", Float2),
+                    };
+                });
         }
 
         public static IntrinsicObjectTypeSymbol CreateAppendStructuredBufferType(TypeSymbol valueType)

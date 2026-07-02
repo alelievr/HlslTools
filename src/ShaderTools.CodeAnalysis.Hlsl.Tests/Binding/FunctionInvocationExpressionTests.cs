@@ -179,6 +179,42 @@ void main()
             Assert.Equal(expectedMatchTypes, result);
         }
 
+        [Theory]
+        // Existing SM6.0 wave intrinsics.
+        [InlineData("WaveActiveSum((float) 0)", "float")]
+        [InlineData("WaveActiveBallot((bool) 0)", "uint4")]
+        [InlineData("WaveReadLaneAt((float) 0, (uint) 0)", "float")]
+        // SM6.5 wave intrinsics added alongside this test.
+        [InlineData("WaveMatch((float) 0)", "uint4")]
+        [InlineData("WaveMatch((int) 0)", "uint4")]
+        [InlineData("WaveMultiPrefixSum((float) 0, (uint4) 0)", "float")]
+        [InlineData("WaveMultiPrefixProduct((int) 0, (uint4) 0)", "int")]
+        [InlineData("WaveMultiPrefixBitAnd((int) 0, (uint4) 0)", "int")]
+        [InlineData("WaveMultiPrefixBitOr((int) 0, (uint4) 0)", "int")]
+        [InlineData("WaveMultiPrefixBitXor((int) 0, (uint4) 0)", "int")]
+        [InlineData("WaveMultiPrefixCountBits((bool) 0, (uint4) 0)", "uint")]
+        public void TestWaveIntrinsicsResolve(string expressionCode, string expectedReturnType)
+        {
+            var syntaxTree = SyntaxFactory.ParseExpression(expressionCode);
+            var syntaxTreeSource = syntaxTree.Root.ToFullString();
+            Assert.Equal(expressionCode, syntaxTreeSource);
+
+            var expression = (ExpressionSyntax) syntaxTree.Root;
+
+            var compilation = new CodeAnalysis.Hlsl.Compilation.Compilation(syntaxTree);
+            var semanticModel = compilation.GetSemanticModel();
+            var combinedDiagnostics = syntaxTree.GetDiagnostics().Concat(semanticModel.GetDiagnostics()).ToList();
+
+            foreach (var d in combinedDiagnostics)
+                Debug.WriteLine(d);
+
+            var invokedFunctionSymbol = (FunctionSymbol) semanticModel.GetSymbol(expression);
+
+            Assert.DoesNotContain(combinedDiagnostics, x => x.Severity == DiagnosticSeverity.Error);
+            Assert.NotNull(invokedFunctionSymbol);
+            Assert.Equal(expectedReturnType, invokedFunctionSymbol.ReturnType.ToMarkup().ToString());
+        }
+
         [Fact]
         public void TestFunctionOverloadResolutionMultipleFunctionDeclarations()
         {

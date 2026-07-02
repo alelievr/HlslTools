@@ -152,6 +152,75 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Symbols
                 "value",
                 "The value to multiply."));
 
+            allFunctions.AddRange(Create1(
+                "WaveMatch",
+                "Returns the set of lanes in the current wave that have the same value as the given expression, as a 128-bit mask packed into a uint4. (Requires shader model 6.5.)",
+                IntrinsicTypes.AllNumericTypes,
+                "value",
+                "The value to compare across the wave.",
+                new[] { IntrinsicTypes.Uint4 }));
+
+            allFunctions.AddRange(Create2(
+                "WaveMultiPrefixSum",
+                "Returns the sum of all of the values in the active lanes, in the group identified by the mask, with indices smaller than the current lane. (Requires shader model 6.5.)",
+                IntrinsicTypes.AllNumericTypes,
+                "value",
+                "The value to sum up.",
+                "mask",
+                "A uint4 bitmask that partitions the active lanes into disjoint groups; the prefix operation is evaluated independently within each group.",
+                overrideParameterType2: IntrinsicTypes.Uint4));
+
+            allFunctions.AddRange(Create2(
+                "WaveMultiPrefixProduct",
+                "Returns the product of all of the values in the active lanes, in the group identified by the mask, with indices smaller than the current lane. (Requires shader model 6.5.)",
+                IntrinsicTypes.AllNumericTypes,
+                "value",
+                "The value to multiply.",
+                "mask",
+                "A uint4 bitmask that partitions the active lanes into disjoint groups; the prefix operation is evaluated independently within each group.",
+                overrideParameterType2: IntrinsicTypes.Uint4));
+
+            allFunctions.AddRange(Create2(
+                "WaveMultiPrefixBitAnd",
+                "Returns the bitwise AND of all of the values in the active lanes, in the group identified by the mask, with indices smaller than the current lane. (Requires shader model 6.5.)",
+                IntrinsicTypes.AllIntTypes,
+                "value",
+                "The value to combine.",
+                "mask",
+                "A uint4 bitmask that partitions the active lanes into disjoint groups; the prefix operation is evaluated independently within each group.",
+                overrideParameterType2: IntrinsicTypes.Uint4));
+
+            allFunctions.AddRange(Create2(
+                "WaveMultiPrefixBitOr",
+                "Returns the bitwise OR of all of the values in the active lanes, in the group identified by the mask, with indices smaller than the current lane. (Requires shader model 6.5.)",
+                IntrinsicTypes.AllIntTypes,
+                "value",
+                "The value to combine.",
+                "mask",
+                "A uint4 bitmask that partitions the active lanes into disjoint groups; the prefix operation is evaluated independently within each group.",
+                overrideParameterType2: IntrinsicTypes.Uint4));
+
+            allFunctions.AddRange(Create2(
+                "WaveMultiPrefixBitXor",
+                "Returns the bitwise XOR of all of the values in the active lanes, in the group identified by the mask, with indices smaller than the current lane. (Requires shader model 6.5.)",
+                IntrinsicTypes.AllIntTypes,
+                "value",
+                "The value to combine.",
+                "mask",
+                "A uint4 bitmask that partitions the active lanes into disjoint groups; the prefix operation is evaluated independently within each group.",
+                overrideParameterType2: IntrinsicTypes.Uint4));
+
+            allFunctions.AddRange(Create2(
+                "WaveMultiPrefixCountBits",
+                "Returns the count of the boolean variables which evaluate to true, across all active lanes in the group identified by the mask, with indices smaller than the current lane. (Requires shader model 6.5.)",
+                new[] { IntrinsicTypes.Bool },
+                "val",
+                "The boolean value to count.",
+                "mask",
+                "A uint4 bitmask that partitions the active lanes into disjoint groups; the prefix operation is evaluated independently within each group.",
+                new[] { IntrinsicTypes.Uint },
+                overrideParameterType2: IntrinsicTypes.Uint4));
+
             allFunctions.AddRange(Create2(
                 "QuadReadLaneAt",
                 "Returns the specified source value from the lane identified by the lane ID within the current quad.",
@@ -190,58 +259,50 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Symbols
                 "Used in an any hit shader to commit the current hit and then stop searching for more hits for the ray.",
                 IntrinsicTypes.Void));
 
-            // TODO: missing template feature for second parameter
-            //allFunctions.AddRange(Create2(
-            //    "CallShader",
-            //    "Invokes another shader from within a shader.",
-            //    IntrinsicTypes.AllTypes,
-            //    "ShaderIndex",
-            //    "An unsigned integer representing the index into the callable shader table specified in the call to DispatchRays",
-            //    "Parameter",
-            //    "The user-defined parameters to pass to the callable shader. This parameter structure must match the parameter structure used in the callable shader pointed to in the shader table.",
-            //    IntrinsicTypes.Void,
-            //    IntrinsicTypes.Uint,
-            //    IntrinsicTypes.Template, // TODO: this feature is missing
-            //    ParameterDirection.Inout));
+            allFunctions.Add(new FunctionSymbol(
+                "CallShader",
+                "Invokes another shader from within a shader.",
+                null,
+                IntrinsicTypes.Void,
+                f => new[]
+                {
+                    new ParameterSymbol("ShaderIndex", "An unsigned integer representing the index into the callable shader table specified in the call to DispatchRays.", f, IntrinsicTypes.Uint),
+                    new ParameterSymbol("Parameter", "The user-defined parameters to pass to the callable shader. This parameter structure must match the parameter structure used in the callable shader pointed to in the shader table.", f, IntrinsicTypes.Template, ParameterDirection.Inout)
+                }));
 
             allFunctions.Add(Create0(
                 "IgnoreHit",
                 "Called from an any hit shader to reject the hit and end the shader.",
                 IntrinsicTypes.Void));
 
-            // TODO: missing template feature for third parameter
-            //allFunctions.AddRange(Create3(
-            //    "ReportHit",
-            //    "Called by an intersection shader to report a ray intersection.",
-            //    IntrinsicTypes.AllTypes,
-            //    "THit",
-            //    "A float value specifying the parametric distance of the intersection.",
-            //    "HitKind",
-            //    "An unsigned integer that identifies the type of hit that occurred. This is a user-specified value in the range of 0-127. The value can be read by any hit or closest hit shaders with the HitKind intrinsic.",
-            //    "Attributes",
-            //    "The user-defined Intersection Attribute Structure specifying the intersection attributes.",
-            //    IntrinsicTypes.Void,
-            //    IntrinsicTypes.Float,
-            //    IntrinsicTypes.Uint,
-            //    IntrinsicTypes.AllTypes /* TODO: this feature is missing */));
+            allFunctions.Add(new FunctionSymbol(
+                "ReportHit",
+                "Called by an intersection shader to report a ray intersection.",
+                null,
+                IntrinsicTypes.Bool,
+                f => new[]
+                {
+                    new ParameterSymbol("THit", "A float value specifying the parametric distance of the intersection.", f, IntrinsicTypes.Float),
+                    new ParameterSymbol("HitKind", "An unsigned integer that identifies the type of hit that occurred. This is a user-specified value in the range of 0-127. The value can be read by any hit or closest hit shaders with the HitKind intrinsic.", f, IntrinsicTypes.Uint),
+                    new ParameterSymbol("Attributes", "The user-defined Intersection Attribute Structure specifying the intersection attributes.", f, IntrinsicTypes.Template)
+                }));
 
-            // TODO: missing template feature for last parameter
-            //allFunctions.Add(new FunctionSymbol(
-            //    "TraceRay",
-            //    "Sends a ray into a search for hits in an acceleration structure.",
-            //    null,
-            //    IntrinsicTypes.Void,
-            //    f => new[]
-            //    {
-            //        new ParameterSymbol("AccelerationStructure", "The top-level acceleration structure to use. Specifying a NULL acceleration structure forces a miss.", f, IntrinsicTypes.RaytracingAccelerationStructure),
-            //        new ParameterSymbol("RayFlags", "Valid combination of ray_flag values. Only defined ray flags are propagated by the system, i.e. are visible to the RayFlags shader intrinsic.", f, IntrinsicTypes.Uint),
-            //        new ParameterSymbol("InstanceInclusionMask", "An unsigned integer, the bottom 8 bits of which are used to include or reject geometry instances based on the InstanceMask in each instance.", f, IntrinsicTypes.Uint),
-            //        new ParameterSymbol("RayContributionToHitGroupIndex", "An unsigned integer specifying the offset to add into addressing calculations within shader tables for hit group indexing. Only the bottom 4 bits of this value are used.", f, IntrinsicTypes.Uint),
-            //        new ParameterSymbol("MultiplierForGeometryContributionToShaderIndex", "An unsigned integer specifying the stride to multiply by GeometryContributionToHitGroupIndex, which is just the 0 based index the geometry was supplied by the app into its bottom-level acceleration structure. Only the bottom 16 bits of this multiplier value are used.", f, IntrinsicTypes.Uint),
-            //        new ParameterSymbol("MissShaderIndex", "An unsigned integer specifying the index of the miss shader within a shader table.", f, IntrinsicTypes.Uint),
-            //        new ParameterSymbol("Ray", "A RayDesc representing the ray to be traced.", f, IntrinsicTypes.RayDesc),
-            //        new ParameterSymbol("Payload", "A user defined ray payload accessed both for both input and output by shaders invoked during raytracing. After TraceRay completes, the caller can access the payload as well.", f, IntrinsicTypes.Template, ParameterDirection.Inout) // TODO: this feature is missing
-            //    }));
+            allFunctions.Add(new FunctionSymbol(
+                "TraceRay",
+                "Sends a ray into a search for hits in an acceleration structure.",
+                null,
+                IntrinsicTypes.Void,
+                f => new[]
+                {
+                    new ParameterSymbol("AccelerationStructure", "The top-level acceleration structure to use. Specifying a NULL acceleration structure forces a miss.", f, IntrinsicTypes.RaytracingAccelerationStructure),
+                    new ParameterSymbol("RayFlags", "Valid combination of ray_flag values. Only defined ray flags are propagated by the system, i.e. are visible to the RayFlags shader intrinsic.", f, IntrinsicTypes.Uint),
+                    new ParameterSymbol("InstanceInclusionMask", "An unsigned integer, the bottom 8 bits of which are used to include or reject geometry instances based on the InstanceMask in each instance.", f, IntrinsicTypes.Uint),
+                    new ParameterSymbol("RayContributionToHitGroupIndex", "An unsigned integer specifying the offset to add into addressing calculations within shader tables for hit group indexing. Only the bottom 4 bits of this value are used.", f, IntrinsicTypes.Uint),
+                    new ParameterSymbol("MultiplierForGeometryContributionToShaderIndex", "An unsigned integer specifying the stride to multiply by GeometryContributionToHitGroupIndex, which is just the 0 based index the geometry was supplied by the app into its bottom-level acceleration structure. Only the bottom 16 bits of this multiplier value are used.", f, IntrinsicTypes.Uint),
+                    new ParameterSymbol("MissShaderIndex", "An unsigned integer specifying the index of the miss shader within a shader table.", f, IntrinsicTypes.Uint),
+                    new ParameterSymbol("Ray", "A RayDesc representing the ray to be traced.", f, IntrinsicTypes.RayDesc),
+                    new ParameterSymbol("Payload", "A user defined ray payload accessed both for input and output by shaders invoked during raytracing. After TraceRay completes, the caller can access the payload as well.", f, IntrinsicTypes.Template, ParameterDirection.Inout)
+                }));
 
             // DXR System Value Intrinsics
 

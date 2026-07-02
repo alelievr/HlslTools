@@ -15,6 +15,7 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Binding
                 .Union(IntrinsicFunctions.AllXboxFunctions)
                 .Cast<Symbol>()
                 .Union(IntrinsicSemantics.AllSemantics)
+                .Union(IntrinsicConstants.AllConstants)
                 .Union(IntrinsicTypes.AllTypes)
                 .Union(IntrinsicNumericConstructors.AllFunctions)
                 .GroupBy(x => x.Name)

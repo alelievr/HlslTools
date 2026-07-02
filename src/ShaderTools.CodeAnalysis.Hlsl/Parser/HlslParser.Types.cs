@@ -78,6 +78,8 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Parser
                 case SyntaxKind.RWStructuredBufferKeyword:
                 case SyntaxKind.StructuredBufferKeyword:
                     return ParseStructuredBufferType(token);
+                case SyntaxKind.RayQueryKeyword:
+                    return ParseRayQueryType(token);
                 case SyntaxKind.RasterizerOrderedTexture1DKeyword:
                 case SyntaxKind.RasterizerOrderedTexture1DArrayKeyword:
                 case SyntaxKind.RasterizerOrderedTexture2DKeyword:
@@ -164,6 +166,58 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Parser
                 new SeparatedSyntaxList<ExpressionSyntax>(new List<SyntaxNodeBase> { type }),
                 greaterThan);
             return new PredefinedObjectTypeSyntax(token, typeArgumentList);
+        }
+
+        private PredefinedObjectTypeSyntax ParseRayQueryType(SyntaxToken token)
+        {
+            // RayQuery<RAY_FLAGS> - the flags are a constant uint expression, typically RAY_FLAG_*
+            // values combined with '|'. We parse them only enough to round-trip and to consume the
+            // closing '>'. Crucially we must NOT let the general expression parser treat that '>' as a
+            // relational operator, so we parse a restricted flag expression that stops at '>'.
+            TemplateArgumentListSyntax templateArgumentList = null;
+            if (Current.Kind == SyntaxKind.LessThanToken)
+            {
+                var lessThan = Match(SyntaxKind.LessThanToken);
+
+                var arguments = new List<SyntaxNodeBase>();
+                if (Current.Kind != SyntaxKind.GreaterThanToken)
+                    arguments.Add(ParseRayQueryFlagsExpression());
+
+                var greaterThan = Match(SyntaxKind.GreaterThanToken);
+                templateArgumentList = new TemplateArgumentListSyntax(lessThan,
+                    new SeparatedSyntaxList<ExpressionSyntax>(arguments), greaterThan);
+            }
+            return new PredefinedObjectTypeSyntax(token, templateArgumentList);
+        }
+
+        private ExpressionSyntax ParseRayQueryFlagsExpression()
+        {
+            var expr = ParseRayQueryFlagTerm();
+            while (Current.Kind == SyntaxKind.BarToken || Current.Kind == SyntaxKind.PlusToken)
+            {
+                var operatorToken = NextToken();
+                var right = ParseRayQueryFlagTerm();
+                expr = new BinaryExpressionSyntax(SyntaxFacts.GetBinaryExpression(operatorToken.Kind), expr, operatorToken, right);
+            }
+            return expr;
+        }
+
+        private ExpressionSyntax ParseRayQueryFlagTerm()
+        {
+            switch (Current.Kind)
+            {
+                case SyntaxKind.OpenParenToken:
+                {
+                    var openParen = Match(SyntaxKind.OpenParenToken);
+                    var expression = ParseRayQueryFlagsExpression();
+                    var closeParen = Match(SyntaxKind.CloseParenToken);
+                    return new ParenthesizedExpressionSyntax(openParen, expression, closeParen);
+                }
+                case SyntaxKind.IntegerLiteralToken:
+                    return new LiteralExpressionSyntax(SyntaxFacts.GetLiteralExpression(Current.Kind), NextToken());
+                default:
+                    return ParseIdentifier();
+            }
         }
 
         private PredefinedObjectTypeSyntax ParseStructuredBufferType(SyntaxToken token)

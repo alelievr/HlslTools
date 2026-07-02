@@ -258,6 +258,11 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Binding
                     }
                 case PredefinedObjectType.ByteAddressBuffer:
                     return IntrinsicTypes.ByteAddressBuffer;
+                case PredefinedObjectType.RayQuery:
+                    // RayQuery<RAY_FLAGS> - the template argument is a constant flags expression rather
+                    // than a type, and does not affect the available members, so it is intentionally
+                    // not bound here. The single RayQuery symbol carries all of its methods.
+                    return IntrinsicTypes.RayQuery;
                 case PredefinedObjectType.BlendState:
                     return IntrinsicTypes.BlendState;
                 case PredefinedObjectType.DepthStencilState:

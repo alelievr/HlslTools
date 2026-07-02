@@ -68,6 +68,7 @@
 
         BuiltInTriangleIntersectionAttributes,
         RayDesc,
-        RaytracingAccelerationStructure
+        RaytracingAccelerationStructure,
+        RayQuery
     }
 }

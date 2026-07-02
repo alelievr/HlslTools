@@ -95,6 +95,16 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Symbols
                 new ParameterSymbol("signature", "", a, IntrinsicTypes.String)
             }));
 
+            allAttributes.Add(Create("shader", "Specifies the shader stage of an entry point. Used by DXC for library targets, e.g. raytracing shaders.", a => new[]
+            {
+                new ParameterSymbol("shaderType", "The shader type, e.g. \"raygeneration\", \"intersection\", \"anyhit\", \"closesthit\", \"miss\", \"callable\", \"vertex\", \"pixel\", \"compute\", \"mesh\" or \"amplification\".", a, IntrinsicTypes.String)
+            }));
+
+            allAttributes.Add(Create("maxrecursiondepth", "Specifies the maximum recursion depth for raytracing.", a => new[]
+            {
+                new ParameterSymbol("depth", "The maximum recursion depth.", a, IntrinsicTypes.Int)
+            }));
+
             AllAttributes = allAttributes.ToImmutableArray();
         }
 

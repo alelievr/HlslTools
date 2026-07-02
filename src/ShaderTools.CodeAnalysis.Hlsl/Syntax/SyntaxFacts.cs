@@ -789,6 +789,7 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Syntax
                 case SyntaxKind.RasterizerOrderedTexture2DArrayKeyword:
                 case SyntaxKind.RasterizerOrderedTexture3DKeyword:
                 case SyntaxKind.RasterizerStateKeyword:
+                case SyntaxKind.RayQueryKeyword:
                 case SyntaxKind.RWBufferKeyword:
                 case SyntaxKind.RWByteAddressBufferKeyword:
                 case SyntaxKind.RWStructuredBufferKeyword:
@@ -878,6 +879,8 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Syntax
                     return PredefinedObjectType.PointStream;
                 case SyntaxKind.RasterizerStateKeyword:
                     return PredefinedObjectType.RasterizerState;
+                case SyntaxKind.RayQueryKeyword:
+                    return PredefinedObjectType.RayQuery;
                 case SyntaxKind.RWBufferKeyword:
                     return PredefinedObjectType.RWBuffer;
                 case SyntaxKind.RWByteAddressBufferKeyword:
@@ -1592,6 +1595,7 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Syntax
                 case SyntaxKind.RasterizerOrderedTexture2DArrayKeyword:
                 case SyntaxKind.RasterizerOrderedTexture3DKeyword:
                 case SyntaxKind.RasterizerStateKeyword:
+                case SyntaxKind.RayQueryKeyword:
                 case SyntaxKind.RegisterKeyword:
                 case SyntaxKind.ReturnKeyword:
                 case SyntaxKind.RowMajorKeyword:
@@ -2531,6 +2535,8 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Syntax
                     return SyntaxKind.RasterizerOrderedTexture3DKeyword;
                 case "RasterizerState":
                     return SyntaxKind.RasterizerStateKeyword;
+                case "RayQuery":
+                    return SyntaxKind.RayQueryKeyword;
                 case "register":
                     return SyntaxKind.RegisterKeyword;
                 case "return":
@@ -2672,6 +2678,134 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Syntax
                     return SyntaxKind.Uint4x3Keyword;
                 case "uint4x4":
                     return SyntaxKind.Uint4x4Keyword;
+                // 32-bit explicit-width types (DXC). These are exact aliases for uint/int/float and
+                // their vector/matrix forms, so they lex to the same keyword kinds.
+                case "uint32_t":
+                    return SyntaxKind.UintKeyword;
+                case "uint32_t1":
+                    return SyntaxKind.Uint1Keyword;
+                case "uint32_t2":
+                    return SyntaxKind.Uint2Keyword;
+                case "uint32_t3":
+                    return SyntaxKind.Uint3Keyword;
+                case "uint32_t4":
+                    return SyntaxKind.Uint4Keyword;
+                case "uint32_t1x1":
+                    return SyntaxKind.Uint1x1Keyword;
+                case "uint32_t1x2":
+                    return SyntaxKind.Uint1x2Keyword;
+                case "uint32_t1x3":
+                    return SyntaxKind.Uint1x3Keyword;
+                case "uint32_t1x4":
+                    return SyntaxKind.Uint1x4Keyword;
+                case "uint32_t2x1":
+                    return SyntaxKind.Uint2x1Keyword;
+                case "uint32_t2x2":
+                    return SyntaxKind.Uint2x2Keyword;
+                case "uint32_t2x3":
+                    return SyntaxKind.Uint2x3Keyword;
+                case "uint32_t2x4":
+                    return SyntaxKind.Uint2x4Keyword;
+                case "uint32_t3x1":
+                    return SyntaxKind.Uint3x1Keyword;
+                case "uint32_t3x2":
+                    return SyntaxKind.Uint3x2Keyword;
+                case "uint32_t3x3":
+                    return SyntaxKind.Uint3x3Keyword;
+                case "uint32_t3x4":
+                    return SyntaxKind.Uint3x4Keyword;
+                case "uint32_t4x1":
+                    return SyntaxKind.Uint4x1Keyword;
+                case "uint32_t4x2":
+                    return SyntaxKind.Uint4x2Keyword;
+                case "uint32_t4x3":
+                    return SyntaxKind.Uint4x3Keyword;
+                case "uint32_t4x4":
+                    return SyntaxKind.Uint4x4Keyword;
+                case "int32_t":
+                    return SyntaxKind.IntKeyword;
+                case "int32_t1":
+                    return SyntaxKind.Int1Keyword;
+                case "int32_t2":
+                    return SyntaxKind.Int2Keyword;
+                case "int32_t3":
+                    return SyntaxKind.Int3Keyword;
+                case "int32_t4":
+                    return SyntaxKind.Int4Keyword;
+                case "int32_t1x1":
+                    return SyntaxKind.Int1x1Keyword;
+                case "int32_t1x2":
+                    return SyntaxKind.Int1x2Keyword;
+                case "int32_t1x3":
+                    return SyntaxKind.Int1x3Keyword;
+                case "int32_t1x4":
+                    return SyntaxKind.Int1x4Keyword;
+                case "int32_t2x1":
+                    return SyntaxKind.Int2x1Keyword;
+                case "int32_t2x2":
+                    return SyntaxKind.Int2x2Keyword;
+                case "int32_t2x3":
+                    return SyntaxKind.Int2x3Keyword;
+                case "int32_t2x4":
+                    return SyntaxKind.Int2x4Keyword;
+                case "int32_t3x1":
+                    return SyntaxKind.Int3x1Keyword;
+                case "int32_t3x2":
+                    return SyntaxKind.Int3x2Keyword;
+                case "int32_t3x3":
+                    return SyntaxKind.Int3x3Keyword;
+                case "int32_t3x4":
+                    return SyntaxKind.Int3x4Keyword;
+                case "int32_t4x1":
+                    return SyntaxKind.Int4x1Keyword;
+                case "int32_t4x2":
+                    return SyntaxKind.Int4x2Keyword;
+                case "int32_t4x3":
+                    return SyntaxKind.Int4x3Keyword;
+                case "int32_t4x4":
+                    return SyntaxKind.Int4x4Keyword;
+                case "float32_t":
+                    return SyntaxKind.FloatKeyword;
+                case "float32_t1":
+                    return SyntaxKind.Float1Keyword;
+                case "float32_t2":
+                    return SyntaxKind.Float2Keyword;
+                case "float32_t3":
+                    return SyntaxKind.Float3Keyword;
+                case "float32_t4":
+                    return SyntaxKind.Float4Keyword;
+                case "float32_t1x1":
+                    return SyntaxKind.Float1x1Keyword;
+                case "float32_t1x2":
+                    return SyntaxKind.Float1x2Keyword;
+                case "float32_t1x3":
+                    return SyntaxKind.Float1x3Keyword;
+                case "float32_t1x4":
+                    return SyntaxKind.Float1x4Keyword;
+                case "float32_t2x1":
+                    return SyntaxKind.Float2x1Keyword;
+                case "float32_t2x2":
+                    return SyntaxKind.Float2x2Keyword;
+                case "float32_t2x3":
+                    return SyntaxKind.Float2x3Keyword;
+                case "float32_t2x4":
+                    return SyntaxKind.Float2x4Keyword;
+                case "float32_t3x1":
+                    return SyntaxKind.Float3x1Keyword;
+                case "float32_t3x2":
+                    return SyntaxKind.Float3x2Keyword;
+                case "float32_t3x3":
+                    return SyntaxKind.Float3x3Keyword;
+                case "float32_t3x4":
+                    return SyntaxKind.Float3x4Keyword;
+                case "float32_t4x1":
+                    return SyntaxKind.Float4x1Keyword;
+                case "float32_t4x2":
+                    return SyntaxKind.Float4x2Keyword;
+                case "float32_t4x3":
+                    return SyntaxKind.Float4x3Keyword;
+                case "float32_t4x4":
+                    return SyntaxKind.Float4x4Keyword;
                 case "uint64_t":
                     return SyntaxKind.Uint64_tKeyword;
                 case "uint64_t1":

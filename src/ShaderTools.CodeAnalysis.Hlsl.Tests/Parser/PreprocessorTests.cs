@@ -1038,6 +1038,68 @@ float bar;
         }
 
         [Fact]
+        public void TestIncludeResolvedFromAdditionalIncludeDirectories()
+        {
+            // foo.hlsl exists only in the SECOND configured additional include directory, proving the
+            // resolver searches each of them in order.
+            const string fooText = @"#define FROM_INCLUDE_DIR 1
+";
+            const string text = @"
+#include <foo.hlsl>
+int x = FROM_INCLUDE_DIR;
+";
+            var dirA = Path.Combine("C:\\", "IncludesA");
+            var dirB = Path.Combine("C:\\", "IncludesB");
+
+            var options = new HlslParseOptions();
+            options.AdditionalIncludeDirectories.Add(dirA);
+            options.AdditionalIncludeDirectories.Add(dirB);
+
+            var node = Parse(text, options, new InMemoryFileSystem(new Dictionary<string, string>
+            {
+                { Path.Combine(dirB, "foo.hlsl"), fooText }
+            }));
+
+            TestRoundTripping(node, text);
+            VerifyDirectivesSpecial(node,
+                new DirectiveInfo { Kind = SyntaxKind.IncludeDirectiveTrivia, Status = NodeStatus.IsActive },
+                new DirectiveInfo { Kind = SyntaxKind.ObjectLikeDefineDirectiveTrivia, Status = NodeStatus.IsActive });
+        }
+
+        [Fact]
+        public void TestNestedIncludeResolvesRelativeToIncludingFile()
+        {
+            // foo.hlsl (found via an additional include directory) itself includes "bar.hlsl" with a
+            // relative path - that must resolve relative to foo.hlsl's own directory.
+            const string barText = @"#define BAR 1
+";
+            const string fooText = @"#include ""bar.hlsl""
+#define FOO 1
+";
+            const string text = @"
+#include <foo.hlsl>
+int x = FOO + BAR;
+";
+            var dir = Path.Combine("C:\\", "Includes");
+
+            var options = new HlslParseOptions();
+            options.AdditionalIncludeDirectories.Add(dir);
+
+            var node = Parse(text, options, new InMemoryFileSystem(new Dictionary<string, string>
+            {
+                { Path.Combine(dir, "foo.hlsl"), fooText },
+                { Path.Combine(dir, "bar.hlsl"), barText }
+            }));
+
+            TestRoundTripping(node, text);
+            VerifyDirectivesSpecial(node,
+                new DirectiveInfo { Kind = SyntaxKind.IncludeDirectiveTrivia, Status = NodeStatus.IsActive },        // #include <foo.hlsl>
+                new DirectiveInfo { Kind = SyntaxKind.IncludeDirectiveTrivia, Status = NodeStatus.IsActive },        // #include "bar.hlsl"
+                new DirectiveInfo { Kind = SyntaxKind.ObjectLikeDefineDirectiveTrivia, Status = NodeStatus.IsActive }, // #define BAR
+                new DirectiveInfo { Kind = SyntaxKind.ObjectLikeDefineDirectiveTrivia, Status = NodeStatus.IsActive }); // #define FOO
+        }
+
+        [Fact]
         public void TestError()
         {
             const string text = @"
@@ -1048,6 +1110,91 @@ float bar;
             TestRoundTripping(node, text);
             VerifyDirectivesSpecial(node,
                 new DirectiveInfo { Kind = SyntaxKind.ErrorDirectiveTrivia, Status = NodeStatus.IsActive, Text = @"This is a compilation ""error""" });
+        }
+
+        [Fact]
+        public void TestPragmaOnce()
+        {
+            // A header guarded with "#pragma once" that is #include'd twice must only be
+            // processed a single time. The directives from foo.hlsl (the #pragma and the #define)
+            // should therefore appear exactly once, even though both #include lines are present.
+            const string fooText = @"#pragma once
+#define FOO 1
+";
+            const string text = @"
+#include <foo.hlsl>
+#include <foo.hlsl>
+float x;
+";
+            var node = Parse(text, null, new InMemoryFileSystem(new Dictionary<string, string>
+            {
+                { "foo.hlsl", fooText }
+            }));
+
+            TestRoundTripping(node, text);
+            VerifyDirectivesSpecial(node,
+                new DirectiveInfo { Kind = SyntaxKind.IncludeDirectiveTrivia, Status = NodeStatus.IsActive },
+                new DirectiveInfo { Kind = SyntaxKind.PragmaDirectiveTrivia, Status = NodeStatus.IsActive, Text = "once" },
+                new DirectiveInfo { Kind = SyntaxKind.ObjectLikeDefineDirectiveTrivia, Status = NodeStatus.IsActive },
+                new DirectiveInfo { Kind = SyntaxKind.IncludeDirectiveTrivia, Status = NodeStatus.IsActive });
+        }
+
+        [Fact]
+        public void TestNoPragmaOnceIncludedTwice()
+        {
+            // Without "#pragma once" (and without traditional include guards), a header that is
+            // #include'd twice is processed twice - so its #define appears twice. This is the
+            // contrast case that proves TestPragmaOnce is actually exercising "#pragma once".
+            const string fooText = @"#define FOO 1
+";
+            const string text = @"
+#include <foo.hlsl>
+#include <foo.hlsl>
+float x;
+";
+            var node = Parse(text, null, new InMemoryFileSystem(new Dictionary<string, string>
+            {
+                { "foo.hlsl", fooText }
+            }));
+
+            TestRoundTripping(node, text);
+            VerifyDirectivesSpecial(node,
+                new DirectiveInfo { Kind = SyntaxKind.IncludeDirectiveTrivia, Status = NodeStatus.IsActive },
+                new DirectiveInfo { Kind = SyntaxKind.ObjectLikeDefineDirectiveTrivia, Status = NodeStatus.IsActive },
+                new DirectiveInfo { Kind = SyntaxKind.IncludeDirectiveTrivia, Status = NodeStatus.IsActive },
+                new DirectiveInfo { Kind = SyntaxKind.ObjectLikeDefineDirectiveTrivia, Status = NodeStatus.IsActive });
+        }
+
+        [Fact]
+        public void TestPragmaOnceTransitiveInclude()
+        {
+            // common.hlsl is guarded with "#pragma once" and is pulled in both directly by the
+            // root file and indirectly via middle.hlsl. It must still only be processed once.
+            const string commonText = @"#pragma once
+#define COMMON 1
+";
+            const string middleText = @"#include <common.hlsl>
+#define MIDDLE 1
+";
+            const string text = @"
+#include <common.hlsl>
+#include <middle.hlsl>
+float x;
+";
+            var node = Parse(text, null, new InMemoryFileSystem(new Dictionary<string, string>
+            {
+                { "common.hlsl", commonText },
+                { "middle.hlsl", middleText }
+            }));
+
+            TestRoundTripping(node, text);
+            VerifyDirectivesSpecial(node,
+                new DirectiveInfo { Kind = SyntaxKind.IncludeDirectiveTrivia, Status = NodeStatus.IsActive }, // #include <common.hlsl>
+                new DirectiveInfo { Kind = SyntaxKind.PragmaDirectiveTrivia, Status = NodeStatus.IsActive, Text = "once" },
+                new DirectiveInfo { Kind = SyntaxKind.ObjectLikeDefineDirectiveTrivia, Status = NodeStatus.IsActive }, // #define COMMON
+                new DirectiveInfo { Kind = SyntaxKind.IncludeDirectiveTrivia, Status = NodeStatus.IsActive }, // #include <middle.hlsl>
+                new DirectiveInfo { Kind = SyntaxKind.IncludeDirectiveTrivia, Status = NodeStatus.IsActive }, // #include <common.hlsl> (skipped)
+                new DirectiveInfo { Kind = SyntaxKind.ObjectLikeDefineDirectiveTrivia, Status = NodeStatus.IsActive }); // #define MIDDLE
         }
 
         [Fact]

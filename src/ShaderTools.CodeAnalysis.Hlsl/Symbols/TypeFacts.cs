@@ -53,6 +53,11 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Symbols
             if (left.Equals(right))
                 return true;
 
+            // The generic placeholder type (used by raytracing intrinsics like TraceRay/ReportHit for
+            // their user-defined payload/attribute parameter) is convertible to and from any type.
+            if (ReferenceEquals(left, IntrinsicTypes.Template) || ReferenceEquals(right, IntrinsicTypes.Template))
+                return true;
+
             // TODO: Need to be able to implicitly cast classes to base class and interfaces?
             if (left.IsUserDefined() || right.IsUserDefined())
                 return false;

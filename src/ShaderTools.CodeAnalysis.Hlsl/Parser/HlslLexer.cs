@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis.Text;
@@ -40,6 +41,10 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Parser
         private readonly SourceFile _rootFile;
         private readonly Stack<IncludeContext> _includeStack;
         private CharReader _charReader;
+
+        // Normalized paths of files that have declared "#pragma once". Such a file is only ever
+        // included once per parse, regardless of how many times (or via which path) it is #include'd.
+        private readonly HashSet<string> _pragmaOnceFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         private class IncludeContext
         {
@@ -313,6 +318,19 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Parser
         {
             var directive = LexSingleDirective(true, true, afterNonWhitespaceOnLine, triviaList);
 
+            // "#pragma once": remember the file we're currently lexing so that any subsequent
+            // attempt to #include it (from this or any other file) is skipped.
+            if (directive.Kind == SyntaxKind.PragmaDirectiveTrivia)
+            {
+                var pragmaDirective = (PragmaDirectiveTriviaSyntax) directive;
+                if (pragmaDirective.IsActive && IsPragmaOnce(pragmaDirective))
+                {
+                    var currentFilePath = NormalizePath(_includeStack.Peek().File.FilePath);
+                    if (currentFilePath != null)
+                        _pragmaOnceFiles.Add(currentFilePath);
+                }
+            }
+
             if (directive.Kind == SyntaxKind.IncludeDirectiveTrivia)
             {
                 var includeDirective = (IncludeDirectiveTriviaSyntax) directive;
@@ -338,6 +356,13 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Parser
                 if (include != null)
                 {
                     triviaList.Add(includeDirective);
+
+                    // If this file previously declared "#pragma once", don't include it again.
+                    // The directive itself is still emitted as trivia above so the text round-trips.
+                    var includePath = NormalizePath(include.FilePath);
+                    if (includePath != null && _pragmaOnceFiles.Contains(includePath))
+                        return true;
+
                     PushIncludeContext(include);
                     return false;
                 }
@@ -349,6 +374,31 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Parser
                 LexExcludedDirectivesAndTrivia(true, triviaList);
 
             return true;
+        }
+
+        private static bool IsPragmaOnce(PragmaDirectiveTriviaSyntax pragma)
+        {
+            // Matches a "#pragma once" with no additional tokens, e.g. not "#pragma once something".
+            return pragma.TokenString != null
+                && pragma.TokenString.Count == 1
+                && string.Equals(pragma.TokenString[0].Text, "once", StringComparison.Ordinal);
+        }
+
+        private static string NormalizePath(string path)
+        {
+            if (string.IsNullOrEmpty(path))
+                return path;
+
+            try
+            {
+                // Canonicalize so that e.g. "dir/../foo.hlsli" and "foo.hlsli" map to the same key.
+                return Path.GetFullPath(path);
+            }
+            catch
+            {
+                // Path.GetFullPath can throw for exotic (e.g. virtual) paths; fall back to the raw path.
+                return path;
+            }
         }
 
         private void PushIncludeContext(SourceFile file)
