@@ -386,7 +386,8 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Binding
                 AddSymbol(structSymbol, declaration.Name?.SourceRange ?? declaration.SourceRange);
             }
 
-            var members = new List<BoundNode>();
+            // Preserve source order in the bound tree while binding fields before methods (see below).
+            var members = new BoundNode[declaration.Members.Count];
 
             // Bit of a hack - need to add member symbols to structSymbol as we go, otherwise (for example)
             // static methods defined inline in a struct won't be able to see struct members.
@@ -404,26 +405,36 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Binding
                 }
             };
 
-            foreach (var memberSyntax in declaration.Members)
+            // Bind all fields first so that method bodies can reference members regardless of the
+            // order in which they're declared (a method may use a field declared after it). See #226.
+            for (var i = 0; i < declaration.Members.Count; i++)
             {
+                var memberSyntax = declaration.Members[i];
+                if (memberSyntax.Kind == SyntaxKind.VariableDeclarationStatement)
+                {
+                    members[i] = structBinder.Bind((VariableDeclarationStatementSyntax) memberSyntax, x => structBinder.BindField(x, structSymbol));
+                    addMemberSymbols();
+                }
+            }
+
+            // Then bind methods, whose bodies now see the full set of fields.
+            for (var i = 0; i < declaration.Members.Count; i++)
+            {
+                var memberSyntax = declaration.Members[i];
                 switch (memberSyntax.Kind)
                 {
-                    case SyntaxKind.VariableDeclarationStatement:
-                        members.Add(structBinder.Bind((VariableDeclarationStatementSyntax) memberSyntax, x => structBinder.BindField(x, structSymbol)));
-                        addMemberSymbols();
-                        break;
                     case SyntaxKind.FunctionDeclaration:
-                        members.Add(structBinder.Bind((FunctionDeclarationSyntax) memberSyntax, x => structBinder.BindFunctionDeclaration(x, structSymbol)));
+                        members[i] = structBinder.Bind((FunctionDeclarationSyntax) memberSyntax, x => structBinder.BindFunctionDeclaration(x, structSymbol));
                         addMemberSymbols();
                         break;
                     case SyntaxKind.FunctionDefinition:
-                        members.Add(structBinder.Bind((FunctionDefinitionSyntax) memberSyntax, x => structBinder.BindFunctionDefinition(x, structSymbol)));
+                        members[i] = structBinder.Bind((FunctionDefinitionSyntax) memberSyntax, x => structBinder.BindFunctionDefinition(x, structSymbol));
                         addMemberSymbols();
                         break;
                 }
             }
 
-            return new BoundStructType(structSymbol, members.ToImmutableArray());
+            return new BoundStructType(structSymbol, members.Where(x => x != null).ToImmutableArray());
         }
 
         private BoundMultipleVariableDeclarations BindField(VariableDeclarationStatementSyntax variableDeclarationStatementSyntax, TypeSymbol parentType)

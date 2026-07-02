@@ -519,6 +519,7 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Syntax
         EqualsEqualsToken,
         ExclamationEqualsToken,
         DotToken,
+        DotDotDotToken,
         HashToken,
         HashHashToken,
 

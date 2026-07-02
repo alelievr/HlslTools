@@ -718,6 +718,14 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Parser
                 case '.':
                     if (Char.IsDigit(_charReader.Peek()))
                         ReadNumber();
+                    else if (_charReader.Peek() == '.' && _charReader.Peek(2) == '.')
+                    {
+                        // Ellipsis, used for variadic macro parameter lists ("#define X(...)").
+                        _kind = SyntaxKind.DotDotDotToken;
+                        NextChar();
+                        NextChar();
+                        NextChar();
+                    }
                     else
                     {
                         _kind = SyntaxKind.DotToken;

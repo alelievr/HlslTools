@@ -11,6 +11,10 @@
   - The `RayQuery<RAY_FLAGS>` type (inline raytracing) with its full method set (`TraceRayInline`, `Proceed`, `CommittedStatus`, `Candidate*`/`Committed*` accessors, etc.).
   - Predefined raytracing constants: `RAY_FLAG_*`, `COMMITTED_*`, `CANDIDATE_*` and `HIT_KIND_*`.
   - The `[shader("...")]` and `[maxrecursiondepth(...)]` entry-point attributes.
+- [x] Add the HLSL 2021 `select(condition, trueValue, falseValue)` intrinsic (the function form of the ternary operator), operating component-wise over all numeric scalar/vector/matrix types ([#223](https://github.com/tgjones/HlslTools/issues/223)).
+- [x] Support type qualifiers (`const`, `row_major`, `column_major`, etc.) inside C-style casts, e.g. `(const float4) x` - previously reported as an invalid expression term ([#262](https://github.com/tgjones/HlslTools/issues/262)).
+- [x] Fix struct/class member binding so a method body can reference a field regardless of whether the field is declared before or after the method ([#226](https://github.com/tgjones/HlslTools/issues/226)).
+- [x] Support variadic function-like macros (`#define LOG(fmt, ...)`), including `__VA_ARGS__` substitution ([#224](https://github.com/tgjones/HlslTools/issues/224)).
 
 ## 1.1.300
 

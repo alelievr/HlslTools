@@ -478,6 +478,11 @@
       </PropertyComment>
       <Kind Name="OpenParenToken"/>
     </Field>
+    <Field Name="Modifiers" Type="List&lt;SyntaxToken&gt;">
+      <PropertyComment>
+        <summary></summary>
+      </PropertyComment>
+    </Field>
     <Field Name="Type" Type="TypeSyntax">
       <PropertyComment>
         <summary></summary>

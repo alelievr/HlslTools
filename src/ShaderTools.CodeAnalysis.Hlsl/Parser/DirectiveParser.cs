@@ -201,7 +201,12 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Parser
             var paramList = new List<SyntaxNodeBase>();
             if (Current.Kind != SyntaxKind.CloseParenToken)
             {
-                if (Current.Kind.IsKeyword())
+                if (Current.Kind == SyntaxKind.DotDotDotToken)
+                {
+                    // Variadic-only macro, e.g. "#define X(...)".
+                    paramList.Add(NextToken());
+                }
+                else if (Current.Kind.IsKeyword())
                 {
                     paramList.Add(NextToken().WithKind(SyntaxKind.IdentifierToken));
                 }
@@ -216,6 +221,11 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Parser
 
                     switch (Current.Kind)
                     {
+                        case SyntaxKind.DotDotDotToken:
+                            // Variadic parameter (must be last), e.g. "#define X(a, ...)".
+                            paramList.Add(NextToken());
+                            break;
+
                         case SyntaxKind.IdentifierToken:
                             paramList.Add(Match(SyntaxKind.IdentifierToken));
                             break;

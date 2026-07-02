@@ -4,6 +4,18 @@
 
 HLSL Tools provides enhanced support for editing High Level Shading Language (HLSL) files in VS Code.
 
+> **This is a fork** of [Tim Jones's HLSL Tools](https://github.com/tgjones/HlslTools), maintained by [Antoine Lelievre (@alelievr)](https://github.com/alelievr). All credit for the original tool goes to Tim Jones.
+
+### What's new in this fork
+
+Modern DirectX Shader Compiler (DXC) / Shader Model 6.x support, plus editor fixes:
+
+- **`#pragma once`** include-guard support.
+- **Modern scalar types**: `float16_t`/`int16_t`/`uint16_t`, `float32_t`/`int32_t`/`uint32_t`, `int64_t`/`uint64_t` (and their vector/matrix forms).
+- **Wave intrinsics**: the Shader Model 6.0 wave/quad intrinsics plus the Shader Model 6.5 additions (`WaveMatch`, `WaveMultiPrefix*`).
+- **DirectX Raytracing (DXR)**: `TraceRay`/`CallShader`/`ReportHit` with user-defined payload/attribute structs, `RayQuery<>` inline raytracing with its full method set, the `RAY_FLAG_*` / `COMMITTED_*` / `CANDIDATE_*` / `HIT_KIND_*` constants, and the `[shader("...")]` entry attribute.
+- **Fixes**: a hover crash that made the extension appear dead, signature help (parameter hints) now auto-triggering on `(` and `,`, and statement completion popping up automatically as you type.
+
 ### System requirements
 
 To use HLSL Tools you need to be on Windows x64 or macOS. Linux support will come in a future version.

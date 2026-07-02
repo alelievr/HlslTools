@@ -1,0 +1,151 @@
+name: Release
+
+# Manually-triggered release: builds the VS Code and Visual Studio extension packages
+# from the current commit and publishes them as a GitHub Release.
+# Run it from the Actions tab -> "Release" -> "Run workflow".
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (blank = "v" + the VS Code extension version in package.json)'
+        required: false
+        default: ''
+      prerelease:
+        description: 'Mark the release as a pre-release'
+        type: boolean
+        default: false
+      overwrite:
+        description: 'Overwrite the release/tag if it already exists'
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # VS Code extension (.vsix): publish the language server, then vsce package.
+  # ---------------------------------------------------------------------------
+  build-vscode:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install .NET 6.0
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '6.0.x'
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Publish language server
+        run: >
+          dotnet publish src/ShaderTools.LanguageServer/ShaderTools.LanguageServer.csproj
+          --configuration Release
+          --output src/ShaderTools.VSCode/bin/win-x64
+          -p:PublishSingleFile=true -p:PublishTrimmed=false
+
+      - name: Install vsce
+        run: npm install -g @vscode/vsce
+
+      - name: Package VS Code extension
+        working-directory: src/ShaderTools.VSCode
+        run: |
+          npm install
+          New-Item -ItemType Directory -Force -Path ../../artifacts | Out-Null
+          vsce package --out ../../artifacts/HlslTools-VSCode.vsix --allow-star-activation
+
+      - name: Upload VS Code artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vscode-vsix
+          path: artifacts/HlslTools-VSCode.vsix
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # Visual Studio extension (.vsix): MSBuild the solution (mirrors ci.yml).
+  # ---------------------------------------------------------------------------
+  build-visualstudio:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install .NET 6.0
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '6.0.x'
+
+      - name: Restore NuGet packages (dotnet)
+        run: dotnet restore src/ShaderTools.sln
+
+      - name: Restore NuGet packages (nuget)
+        run: nuget restore src/ShaderTools.sln
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build Visual Studio extension
+        run: msbuild src/ShaderTools.Editor.VisualStudio/ShaderTools.Editor.VisualStudio.csproj /p:Configuration=Release /p:DeployExtension=false
+
+      - name: Collect VSIX
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts | Out-Null
+          Copy-Item src/ShaderTools.Editor.VisualStudio/bin/Release/ShaderTools.Editor.VisualStudio.vsix artifacts/HlslTools-VisualStudio.vsix
+
+      - name: Upload Visual Studio artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vs-vsix
+          path: artifacts/HlslTools-VisualStudio.vsix
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # Create the GitHub Release and attach both .vsix packages.
+  # ---------------------------------------------------------------------------
+  release:
+    needs: [build-vscode, build-visualstudio]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Determine release tag
+        id: meta
+        run: |
+          TAG="${{ inputs.tag }}"
+          if [ -z "$TAG" ]; then
+            VERSION="$(jq -r .version src/ShaderTools.VSCode/package.json)"
+            TAG="v$VERSION"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Release tag: $TAG"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.meta.outputs.tag }}
+          OVERWRITE: ${{ inputs.overwrite }}
+          PRERELEASE: ${{ inputs.prerelease }}
+        run: |
+          if [ "$OVERWRITE" = "true" ] && gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists - deleting it (and its tag) first."
+            gh release delete "$TAG" --yes --cleanup-tag
+          fi
+
+          FLAGS=()
+          [ "$PRERELEASE" = "true" ] && FLAGS+=(--prerelease)
+
+          gh release create "$TAG" \
+            dist/vscode-vsix/HlslTools-VSCode.vsix \
+            dist/vs-vsix/HlslTools-VisualStudio.vsix \
+            --title "$TAG" \
+            --generate-notes \
+            "${FLAGS[@]}"

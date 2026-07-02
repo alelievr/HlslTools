@@ -83,6 +83,18 @@ float Dummy(float input)
             await VerifyItemIsAbsentAsync(markup, "color");
         }
 
+        [Fact]
+        public async Task GlobalFunction_AboveSourceLocationInFunction_InCompletionList()
+        {
+            var markup = @"float MyHelper(float x) { return x; }
+float4 PS(float4 pos : SV_Position) : SV_Target
+{
+    My$$
+    return 0;
+}";
+            await VerifyItemExistsAsync(markup, "MyHelper");
+        }
+
         private async Task VerifyItemExistsAsync(string markup, string expectedItem)
         {
             var completionItems = await GetCompletionItems(markup);

@@ -50,7 +50,17 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Parser
                     var macroArguments = new MacroArgumentsParser(lexer).ParseArgumentList();
                     ExpandMacros = true;
 
-                    if (macroArguments.Arguments.Count != functionLikeDefine.Parameters.Parameters.Count)
+                    // Variadic macros (last parameter is "...") accept more arguments than declared
+                    // parameters; the extra arguments are collected into __VA_ARGS__.
+                    var declaredParameters = functionLikeDefine.Parameters.Parameters;
+                    var isVariadic = declaredParameters.Count > 0
+                        && declaredParameters[declaredParameters.Count - 1].Kind == SyntaxKind.DotDotDotToken;
+                    var fixedParameterCount = isVariadic ? declaredParameters.Count - 1 : declaredParameters.Count;
+
+                    var argumentCountMismatch = isVariadic
+                        ? macroArguments.Arguments.Count < fixedParameterCount
+                        : macroArguments.Arguments.Count != fixedParameterCount;
+                    if (argumentCountMismatch)
                     {
                         expandedTokens = new List<SyntaxToken>
                         {
@@ -73,7 +83,8 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Parser
                     macroBody = ReplaceParameters(
                         macroArguments.Arguments.ToList(), expandedArguments,
                         functionLikeDefineDirective.Parameters,
-                        functionLikeDefineDirective.Body);
+                        functionLikeDefineDirective.Body,
+                        isVariadic, fixedParameterCount);
 
                     lastToken = macroArguments.DescendantTokens().LastOrDefault(x => !x.IsMissing) ?? token;
 
@@ -162,7 +173,9 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Parser
             List<MacroArgumentSyntax> originalArguments,
             List<List<SyntaxToken>> expandedArguments,
             FunctionLikeDefineDirectiveParameterListSyntax parameterList,
-            List<SyntaxToken> macroBody)
+            List<SyntaxToken> macroBody,
+            bool isVariadic = false,
+            int fixedParameterCount = 0)
         {
             var parameters = parameterList.Parameters;
 
@@ -171,6 +184,18 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Parser
             for (var i = 0; i < macroBody.Count; i++)
             {
                 var token = macroBody[i];
+
+                // Substitute __VA_ARGS__ with the variadic arguments (comma-separated).
+                if (isVariadic && token.Kind == SyntaxKind.IdentifierToken && token.Text == "__VA_ARGS__")
+                {
+                    for (var argIndex = fixedParameterCount; argIndex < expandedArguments.Count; argIndex++)
+                    {
+                        if (argIndex > fixedParameterCount)
+                            result.Add(SyntaxFactory.ParseToken(", "));
+                        result.AddRange(expandedArguments[argIndex]);
+                    }
+                    continue;
+                }
 
                 // Do token pasting (##).
                 if (i < macroBody.Count - 2

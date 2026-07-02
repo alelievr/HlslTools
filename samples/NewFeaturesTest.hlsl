@@ -11,10 +11,19 @@
 //   * full DirectX Raytracing (DXR)    (TraceRay/ReportHit/CallShader with user payloads,
 //                                       RayQuery<> inline raytracing, RAY_FLAG_*/COMMITTED_*/...,
 //                                       and the [shader("...")] entry attribute)
+//   * HLSL 2021 select() intrinsic     (#223)
+//   * const/row_major/... in casts     (#262)
+//   * struct field used before decl    (#226)
+//   * variadic macros + __VA_ARGS__    (#224)
 // =================================================================================================
 
 #include "Common.hlsli"
 #include "Common.hlsli"   // included a second time on purpose: #pragma once must dedupe it.
+
+// Variadic function-like macro (#224): __VA_ARGS__ expands to the extra arguments.
+#define MAKE_FLOAT4(...) float4(__VA_ARGS__)
+
+RWTexture2D<unorm float4> g_output : register(u0);
 
 //--------------------------------------------------------------------------------------------------
 // Modern scalar types (DXC -enable-16bit-types).
@@ -33,6 +42,34 @@ void ScalarTypes()
 
     float angle = TWO_PI;   // from Common.hlsli (the #define)
 }
+
+//--------------------------------------------------------------------------------------------------
+// HLSL 2021 select() intrinsic (#223), type qualifiers in casts (#262), variadic macros (#224).
+//--------------------------------------------------------------------------------------------------
+float4 ModernSyntax(bool cond, bool4 mask, float4 a, float4 b)
+{
+    // select() - function form of the ternary operator, component-wise.
+    float  s = select(cond, a.x, b.x);
+    float4 v = select(mask, a, b);
+
+    // Type qualifiers inside a C-style cast.
+    float4   c = (const float4) a;
+    float4x4 m = (row_major float4x4) 0;
+
+    // Variadic macro invocation.
+    float4 made = MAKE_FLOAT4(s, v.y, c.z, m[0].w);
+    return made;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Struct method referencing a field declared *after* it (#226).
+//--------------------------------------------------------------------------------------------------
+struct Accumulator
+{
+    float Sum()          { return _total; }   // _total is declared below, but still resolves.
+    void  Add(float x)   { _total += x; }
+    float _total;
+};
 
 //--------------------------------------------------------------------------------------------------
 // Wave intrinsics - SM6.0 (already supported) and SM6.5 (newly added).

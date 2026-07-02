@@ -18,8 +18,10 @@ namespace ShaderTools.LanguageServer.Handlers
             _workspace = workspace;
             _registrationOptions = new SignatureHelpRegistrationOptions
             {
-                DocumentSelector = documentSelector
-            }; ;
+                DocumentSelector = documentSelector,
+                // Auto-invoke parameter hints when the user opens an argument list or types a comma.
+                TriggerCharacters = new Container<string>("(", ",")
+            };
         }
 
         public Task<SignatureHelp> Handle(SignatureHelpParams request, CancellationToken token)

@@ -583,6 +583,69 @@ TEX2D(MyTexture);
         }
 
         [Fact]
+        public void TestVariadicFunctionLikeDefine()
+        {
+            // #224 - variadic macros with __VA_ARGS__.
+            const string text = @"
+#define CALL(fn, ...) fn(__VA_ARGS__)
+float r = CALL(func, a, b);
+";
+            var node = Parse(text);
+
+            TestRoundTripping(node, text);
+            VerifyDirectivesSpecial(node,
+                new DirectiveInfo { Kind = SyntaxKind.FunctionLikeDefineDirectiveTrivia, Status = NodeStatus.IsActive, Text = "CALL" });
+
+            var varDeclStatement = (VariableDeclarationStatementSyntax) node.ChildNodes[0];
+            var equalsValueClause = (EqualsValueClauseSyntax) varDeclStatement.Declaration.Variables[0].Initializer;
+            var invocation = (FunctionInvocationExpressionSyntax) equalsValueClause.Value;
+            Assert.Equal("func", ((IdentifierNameSyntax) invocation.Name).Name.Text);
+            Assert.Equal(2, invocation.ArgumentList.Arguments.Count);
+            Assert.Equal("a", ((IdentifierNameSyntax) invocation.ArgumentList.Arguments[0]).Name.Text);
+            Assert.Equal("b", ((IdentifierNameSyntax) invocation.ArgumentList.Arguments[1]).Name.Text);
+        }
+
+        [Fact]
+        public void TestVariadicOnlyFunctionLikeDefine()
+        {
+            // #224 - variadic macro with no named parameters.
+            const string text = @"
+#define WRAP(...) g(__VA_ARGS__)
+float r = WRAP(x, y, z);
+";
+            var node = Parse(text);
+
+            TestRoundTripping(node, text);
+            VerifyDirectivesSpecial(node,
+                new DirectiveInfo { Kind = SyntaxKind.FunctionLikeDefineDirectiveTrivia, Status = NodeStatus.IsActive, Text = "WRAP" });
+
+            var varDeclStatement = (VariableDeclarationStatementSyntax) node.ChildNodes[0];
+            var equalsValueClause = (EqualsValueClauseSyntax) varDeclStatement.Declaration.Variables[0].Initializer;
+            var invocation = (FunctionInvocationExpressionSyntax) equalsValueClause.Value;
+            Assert.Equal("g", ((IdentifierNameSyntax) invocation.Name).Name.Text);
+            Assert.Equal(3, invocation.ArgumentList.Arguments.Count);
+        }
+
+        [Fact]
+        public void TestVariadicFunctionLikeDefineWithSingleVariadicArg()
+        {
+            // A variadic macro invoked with exactly the fixed arguments plus one variadic arg.
+            const string text = @"
+#define MAX_OF(first, ...) combine(first, __VA_ARGS__)
+float r = MAX_OF(a, b);
+";
+            var node = Parse(text);
+
+            TestRoundTripping(node, text);
+
+            var varDeclStatement = (VariableDeclarationStatementSyntax) node.ChildNodes[0];
+            var equalsValueClause = (EqualsValueClauseSyntax) varDeclStatement.Declaration.Variables[0].Initializer;
+            var invocation = (FunctionInvocationExpressionSyntax) equalsValueClause.Value;
+            Assert.Equal("combine", ((IdentifierNameSyntax) invocation.Name).Name.Text);
+            Assert.Equal(2, invocation.ArgumentList.Arguments.Count);
+        }
+
+        [Fact]
         public void TestNegBadDirectiveName()
         {
             const string text = @"#foo";

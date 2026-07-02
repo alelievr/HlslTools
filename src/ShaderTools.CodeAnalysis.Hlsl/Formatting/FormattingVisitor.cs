@@ -945,6 +945,9 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Formatting
         {
             FormatOpenParenToken(node.OpenParenToken, _options.Spacing.InsertSpacesWithinParenthesesOfTypeCasts);
 
+            foreach (var modifier in node.Modifiers)
+                FormatToken(modifier, trailing: TrailingFormattingOperation.EnsureTrailingWhitespace);
+
             Visit(node.Type);
 
             foreach (var arrayRankSpecifier in node.ArrayRankSpecifiers)

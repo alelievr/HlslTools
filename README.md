@@ -1,12 +1,40 @@
 # HLSL Tools for Visual Studio [![Join the chat at https://gitter.im/tgjones/HlslTools](https://badges.gitter.im/tgjones/HlslTools.svg)](https://gitter.im/tgjones/HlslTools) [![Build Status](https://dev.azure.com/timjones/HlslTools/_apis/build/status/tgjones.HlslTools?branchName=master)](https://dev.azure.com/timjones/HlslTools/_build/latest?definitionId=3&branchName=master)
 
-*This extension is for Visual Studio 2019 / 2022. [Go here for the Visual Studio Code extension](https://github.com/tgjones/HlslTools/tree/master/src/ShaderTools.VSCode).*
+> **This is a fork** of [Tim Jones's HLSL Tools](https://github.com/tgjones/HlslTools), maintained by [Antoine Lelievre (@alelievr)](https://github.com/alelievr). It adds support for modern DirectX Shader Compiler (DXC) / Shader Model 6.x language features and fixes several editor issues — see [What's new in this fork](#whats-new-in-this-fork). All credit for the original tool goes to Tim Jones.
 
-HLSL Tools is a Visual Studio 2019 / 2022 extension that provides enhanced support for editing High Level Shading Language (HLSL) files.
+*This extension is for Visual Studio 2019 / 2022 / 2026. [Go here for the Visual Studio Code extension](src/ShaderTools.VSCode).*
 
-Download the extension at the [Visual Studio Marketplace](https://visualstudiogallery.msdn.microsoft.com/75ddd3be-6eda-4433-a850-458b51186658).
+HLSL Tools is a Visual Studio extension that provides enhanced support for editing High Level Shading Language (HLSL) files.
+
+The original extension is available at the [Visual Studio Marketplace](https://visualstudiogallery.msdn.microsoft.com/75ddd3be-6eda-4433-a850-458b51186658); this fork is built from source (see [CONTRIBUTING.md](CONTRIBUTING.md)).
 
 See the [changelog](CHANGELOG.md) for changes.
+
+### What's new in this fork
+
+This fork extends the original HLSL Tools with modern DXC / Shader Model 6.x support, and fixes several editor issues.
+
+**Language features**
+
+- **`#pragma once`** — a header guarded with `#pragma once` is processed only once per parse, no matter how many times (or via which path) it is `#include`d.
+- **Modern scalar types** — the DXC explicit-width scalar types, plus their vector and matrix forms:
+  - 16-bit: `float16_t`, `int16_t`, `uint16_t`
+  - 32-bit: `float32_t`, `int32_t`, `uint32_t` (aliases of `float` / `int` / `uint`)
+  - 64-bit: `int64_t`, `uint64_t`
+- **Wave intrinsics** — the Shader Model 6.0 wave/quad intrinsics, plus the Shader Model 6.5 additions: `WaveMatch`, `WaveMultiPrefixSum`, `WaveMultiPrefixProduct`, `WaveMultiPrefixBitAnd`, `WaveMultiPrefixBitOr`, `WaveMultiPrefixBitXor`, `WaveMultiPrefixCountBits`.
+- **DirectX Raytracing (DXR)**
+  - `TraceRay`, `CallShader` and `ReportHit`, which accept a user-defined payload / attribute struct.
+  - `RayQuery<RAY_FLAGS>` inline raytracing (Shader Model 6.5) with its full method set (`TraceRayInline`, `Proceed`, `CommittedStatus` / `CandidateType`, and all of the `Committed*` / `Candidate*` accessors).
+  - Predefined raytracing constants: `RAY_FLAG_*`, `COMMITTED_*`, `CANDIDATE_*`, `HIT_KIND_*`.
+  - The `[shader("...")]` and `[maxrecursiondepth(...)]` entry-point attributes.
+
+**Editor / tooling fixes**
+
+- Fixed a Visual Studio Code language-server crash when hovering over a location with no quick info (it returned an empty hover that crashed the client's hover converter).
+- Signature help (parameter hints) now auto-triggers on `(` and `,`.
+- Statement completion now pops up automatically as you type in HLSL files (via a per-language `editor.quickSuggestions` default).
+- The Visual Studio extension can now be built and installed on **Visual Studio 2026 (v18)** (updated VS SDK build tools and widened install target).
+- Fixed a build error (`NU1605` package downgrade) in the language server project.
 
 ### Why use HLSL Tools?
 
@@ -174,10 +202,12 @@ Contributions are always welcome. [Please read the contributing guide first.](CO
 
 ### Maintainer(s)
 
-* [@tgjones](https://github.com/tgjones)
+* This fork: [@alelievr](https://github.com/alelievr)
+* Original HLSL Tools: [@tgjones](https://github.com/tgjones)
 
 ### Acknowledgements
 
+* This project is a fork of [HLSL Tools by Tim Jones (@tgjones)](https://github.com/tgjones/HlslTools) — the overwhelming majority of the code and design is his work. This fork only adds the DXC / Shader Model 6.x features and fixes listed above.
 * Much of the code structure, and some of the actual code, comes from [Roslyn](https://github.com/dotnet/roslyn).
 * [NQuery-vnext](https://github.com/terrajobst/nquery-vnext) is a nice example of a simplified Roslyn-style API,
   and HLSL Tools borrows some of its ideas and code.

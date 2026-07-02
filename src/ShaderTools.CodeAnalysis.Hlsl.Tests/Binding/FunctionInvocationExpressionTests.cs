@@ -215,6 +215,35 @@ void main()
             Assert.Equal(expectedReturnType, invokedFunctionSymbol.ReturnType.ToMarkup().ToString());
         }
 
+        [Theory]
+        // HLSL 2021 'select' intrinsic - function form of the ternary operator (#223).
+        [InlineData("select((bool) true, (float) 1, (float) 2)", "float")]
+        [InlineData("select((bool) true, (int) 1, (int) 2)", "int")]
+        [InlineData("select((bool3) 0, (float3) 1, (float3) 2)", "float3")]
+        [InlineData("select((bool2) 0, (int2) 1, (int2) 2)", "int2")]
+        [InlineData("select((bool2x2) 0, (float2x2) 1, (float2x2) 2)", "float2x2")]
+        public void TestSelectIntrinsicResolves(string expressionCode, string expectedReturnType)
+        {
+            var syntaxTree = SyntaxFactory.ParseExpression(expressionCode);
+            var syntaxTreeSource = syntaxTree.Root.ToFullString();
+            Assert.Equal(expressionCode, syntaxTreeSource);
+
+            var expression = (ExpressionSyntax) syntaxTree.Root;
+
+            var compilation = new CodeAnalysis.Hlsl.Compilation.Compilation(syntaxTree);
+            var semanticModel = compilation.GetSemanticModel();
+            var combinedDiagnostics = syntaxTree.GetDiagnostics().Concat(semanticModel.GetDiagnostics()).ToList();
+
+            foreach (var d in combinedDiagnostics)
+                Debug.WriteLine(d);
+
+            var invokedFunctionSymbol = (FunctionSymbol) semanticModel.GetSymbol(expression);
+
+            Assert.DoesNotContain(combinedDiagnostics, x => x.Severity == DiagnosticSeverity.Error);
+            Assert.NotNull(invokedFunctionSymbol);
+            Assert.Equal(expectedReturnType, invokedFunctionSymbol.ReturnType.ToMarkup().ToString());
+        }
+
         [Fact]
         public void TestFunctionOverloadResolutionMultipleFunctionDeclarations()
         {

@@ -91,6 +91,8 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Syntax
                     return ">";
                 case SyntaxKind.DotToken:
                     return ".";
+                case SyntaxKind.DotDotDotToken:
+                    return "...";
                 case SyntaxKind.QuestionToken:
                     return "?";
                 case SyntaxKind.HashToken:

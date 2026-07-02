@@ -258,11 +258,13 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Parser
                 // Looks like a cast, so parse it as one.
                 Reset(ref resetPoint);
                 var openParen = Match(SyntaxKind.OpenParenToken);
+                var modifiers = new List<SyntaxToken>();
+                ParseDeclarationModifiers(modifiers);
                 List<ArrayRankSpecifierSyntax> arrayRankSpecifiers;
                 var type = ParseTypeForCast(out arrayRankSpecifiers);
                 var closeParen = Match(SyntaxKind.CloseParenToken);
                 var expr = ParseSubExpression(SyntaxFacts.GetOperatorPrecedence(SyntaxKind.CastExpression));
-                return new CastExpressionSyntax(openParen, type, arrayRankSpecifiers, closeParen, expr);
+                return new CastExpressionSyntax(openParen, modifiers, type, arrayRankSpecifiers, closeParen, expr);
             }
 
             // Doesn't look like a cast, so parse this as a parenthesized expression.
@@ -290,6 +292,10 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Parser
                 return false;
 
             NextToken();
+
+            // Skip any leading type qualifiers/modifiers, e.g. "(const float4) x".
+            while (SyntaxFacts.IsDeclarationModifier(Current))
+                NextToken();
 
             var type = ScanType();
             if (type == ScanTypeFlags.NotType)

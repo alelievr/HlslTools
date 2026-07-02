@@ -399,7 +399,41 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Symbols
                 "numPrimitives", "The number of primitives.",
                 new[] { IntrinsicTypes.Void }));
 
+            // HLSL 2021 'select' intrinsic - a function form of the ternary operator that
+            // operates component-wise. The condition is a bool of the same shape (scalar /
+            // vector / matrix) as the values being selected.
+            var selectValueTypes = IntrinsicTypes.AllNumericTypes;
+            var selectConditionTypes = new TypeSymbol[selectValueTypes.Length];
+            for (var i = 0; i < selectValueTypes.Length; i++)
+                selectConditionTypes[i] = GetMatchingBoolType(selectValueTypes[i]);
+
+            allFunctions.AddRange(Create3(
+                "select",
+                "Selects between two values on a per-component basis, based on a boolean condition. Introduced in HLSL 2021 as a function form of the ternary '?:' operator.",
+                selectValueTypes,
+                "condition", "The boolean condition. When true, trueValue is returned; otherwise falseValue is returned.",
+                "trueValue", "The value returned when the condition is true.",
+                "falseValue", "The value returned when the condition is false.",
+                overrideParameterTypes1: selectConditionTypes));
+
             return allFunctions;
+        }
+
+        /// <summary>
+        /// Returns the bool intrinsic type with the same shape (scalar / vector / matrix) as
+        /// the given numeric type.
+        /// </summary>
+        private static TypeSymbol GetMatchingBoolType(TypeSymbol type)
+        {
+            switch (type)
+            {
+                case IntrinsicVectorTypeSymbol v:
+                    return IntrinsicTypes.GetVectorType(ScalarType.Bool, v.NumComponents);
+                case IntrinsicMatrixTypeSymbol m:
+                    return IntrinsicTypes.GetMatrixType(ScalarType.Bool, m.Rows, m.Cols);
+                default:
+                    return IntrinsicTypes.GetScalarType(ScalarType.Bool);
+            }
         }
     }
 }
