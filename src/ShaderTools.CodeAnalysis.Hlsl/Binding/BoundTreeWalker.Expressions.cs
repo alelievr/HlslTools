@@ -42,6 +42,9 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Binding
                 case BoundNodeKind.ConversionExpression:
                     VisitConversionExpression((BoundConversionExpression) node);
                     break;
+                case BoundNodeKind.SizeofExpression:
+                    VisitSizeofExpression((BoundSizeofExpression) node);
+                    break;
                 case BoundNodeKind.CompoundExpression:
                     VisitCompoundExpression((BoundCompoundExpression) node);
                     break;
@@ -119,6 +122,11 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Binding
         {
             VisitExpression(node.Left);
             VisitExpression(node.Right);
+        }
+
+        protected virtual void VisitSizeofExpression(BoundSizeofExpression node)
+        {
+            // The operand is a type, not an expression - nothing to walk.
         }
 
         protected virtual void VisitConversionExpression(BoundConversionExpression node)

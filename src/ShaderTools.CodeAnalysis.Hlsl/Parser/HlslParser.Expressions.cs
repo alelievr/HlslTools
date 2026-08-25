@@ -141,7 +141,12 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Parser
             switch (tk)
             {
                 case SyntaxKind.IdentifierToken:
-                    expr = ParseIdentifierOrFunctionInvocationExpression();
+                    // 'sizeof' is a contextual keyword: only "sizeof(" is the operator, so a
+                    // variable or function that happens to be named sizeof keeps working.
+                    if (Current.ContextualKind == SyntaxKind.SizeofKeyword && Lookahead.Kind == SyntaxKind.OpenParenToken)
+                        expr = ParseSizeofExpression();
+                    else
+                        expr = ParseIdentifierOrFunctionInvocationExpression();
                     break;
                 case SyntaxKind.FalseKeyword:
                 case SyntaxKind.TrueKeyword:
@@ -199,6 +204,23 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Parser
         {
             var arguments = ParseParenthesizedArgumentList(false);
             return new FunctionInvocationExpressionSyntax(name, arguments);
+        }
+
+        private SizeofExpressionSyntax ParseSizeofExpression()
+        {
+            Debug.Assert(Current.ContextualKind == SyntaxKind.SizeofKeyword);
+
+            var sizeofKeyword = NextToken().WithKind(SyntaxKind.SizeofKeyword);
+            var openParen = Match(SyntaxKind.OpenParenToken);
+
+            // The operand is a type (sizeof(float4), sizeof(MyStruct), sizeof(uint32_t)); a bare
+            // identifier could also be a variable, which the binder disambiguates.
+            List<ArrayRankSpecifierSyntax> arrayRankSpecifiers;
+            var type = ParseTypeForCast(out arrayRankSpecifiers);
+
+            var closeParen = Match(SyntaxKind.CloseParenToken);
+
+            return new SizeofExpressionSyntax(sizeofKeyword, openParen, type, arrayRankSpecifiers, closeParen);
         }
 
         private NumericConstructorInvocationExpressionSyntax ParseNumericConstructorInvocationExpression()

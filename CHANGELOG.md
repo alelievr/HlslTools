@@ -18,6 +18,10 @@ Completion (both editors):
 - [x] Only suggest type names where only a type can appear (global scope, struct / cbuffer bodies) - variables and functions are no longer offered where they can't compile.
 - [x] Suggest the predefined object types (`Texture2D`, `StructuredBuffer`, `RWBuffer`, `ConstantBuffer`, `SamplerState`, ...), which were previously never offered because they are parser keywords rather than symbols.
 
+Language:
+
+- [x] Add the `sizeof(type)` operator (DXC): `sizeof(uint32_t)`, `sizeof(float4)`, `sizeof(MyStruct)`, `sizeof(myVar)` bind to a `uint` constant. Previously `sizeof` was parsed as a call to an undefined function with the type as a value argument, producing "Invalid expression term" / "undefined symbol" errors.
+
 Fixes:
 
 - [x] Fix the lexer advancing past the end of the source text on input truncated mid-token (unterminated string / character literal, trailing `\`, unterminated `#include <`), which threw `ArgumentOutOfRangeException` and could crash the language server.

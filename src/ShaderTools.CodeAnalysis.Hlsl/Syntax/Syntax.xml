@@ -506,6 +506,41 @@
     </Field>
   </Node>
 
+  <Node Name="SizeofExpressionSyntax" Base="ExpressionSyntax">
+    <TypeComment>
+      <summary>sizeof(type) - the size in bytes of a type, as a uint constant.</summary>
+    </TypeComment>
+    <Kind Name="SizeofExpression"/>
+    <Field Name="SizeofKeyword" Type="SyntaxToken">
+      <PropertyComment>
+        <summary></summary>
+      </PropertyComment>
+      <Kind Name="SizeofKeyword"/>
+    </Field>
+    <Field Name="OpenParenToken" Type="SyntaxToken">
+      <PropertyComment>
+        <summary></summary>
+      </PropertyComment>
+      <Kind Name="OpenParenToken"/>
+    </Field>
+    <Field Name="Type" Type="TypeSyntax">
+      <PropertyComment>
+        <summary></summary>
+      </PropertyComment>
+    </Field>
+    <Field Name="ArrayRankSpecifiers" Type="List&lt;ArrayRankSpecifierSyntax&gt;">
+      <PropertyComment>
+        <summary></summary>
+      </PropertyComment>
+    </Field>
+    <Field Name="CloseParenToken" Type="SyntaxToken">
+      <PropertyComment>
+        <summary></summary>
+      </PropertyComment>
+      <Kind Name="CloseParenToken"/>
+    </Field>
+  </Node>
+
   <Node Name="CompilationUnitSyntax" Base="SyntaxNode">
     <TypeComment>
       <summary></summary>

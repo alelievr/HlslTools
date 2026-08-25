@@ -34,6 +34,7 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Binding.BoundNodes
         MethodName,
         FunctionName,
         ConversionExpression,
+        SizeofExpression,
         CompoundExpression,
         ArrayInitializerExpression,
         CompileExpression,

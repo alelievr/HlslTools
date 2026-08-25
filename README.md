@@ -28,6 +28,7 @@ and brings the Visual Studio Code extension's language server up to par with (an
   - `RayQuery<RAY_FLAGS>` inline raytracing (Shader Model 6.5) with its full method set (`TraceRayInline`, `Proceed`, `CommittedStatus` / `CandidateType`, and all of the `Committed*` / `Candidate*` accessors).
   - Predefined raytracing constants: `RAY_FLAG_*`, `COMMITTED_*`, `CANDIDATE_*`, `HIT_KIND_*`.
   - The `[shader("...")]` and `[maxrecursiondepth(...)]` entry-point attributes.
+- **`sizeof`** — the DXC `sizeof(type)` operator (`sizeof(uint32_t)`, `sizeof(float4)`, `sizeof(MyStruct)`, `sizeof(myVar)`), typed as `uint`.
 
 **Visual Studio Code — new language server features**
 

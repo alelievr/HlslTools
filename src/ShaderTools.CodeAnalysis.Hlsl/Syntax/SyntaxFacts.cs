@@ -229,6 +229,8 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Syntax
                     return "packoffset";
                 case SyntaxKind.PayloadKeyword:
                     return "payload";
+                case SyntaxKind.SizeofKeyword:
+                    return "sizeof";
                 case SyntaxKind.PragmaKeyword:
                     return "pragma";
                 case SyntaxKind.PrimitivesKeyword:
@@ -1583,6 +1585,7 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Syntax
                 case SyntaxKind.PackoffsetKeyword:
                 case SyntaxKind.PassKeyword:
                 case SyntaxKind.PayloadKeyword:
+                case SyntaxKind.SizeofKeyword:
                 case SyntaxKind.PixelShaderKeyword:
                 case SyntaxKind.PointKeyword:
                 case SyntaxKind.PointStreamKeyword:
@@ -2942,6 +2945,8 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Syntax
                     return SyntaxKind.VerticesKeyword;
                 case "payload":
                     return SyntaxKind.PayloadKeyword;
+                case "sizeof":
+                    return SyntaxKind.SizeofKeyword;
                 case "primitives":
                     return SyntaxKind.PrimitivesKeyword;
                 default:

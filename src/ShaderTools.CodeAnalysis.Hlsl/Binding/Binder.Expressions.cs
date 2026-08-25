@@ -83,6 +83,8 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Binding
                     return BindAssignmentExpression((AssignmentExpressionSyntax) node);
                 case SyntaxKind.CastExpression:
                     return BindCastExpression((CastExpressionSyntax) node);
+                case SyntaxKind.SizeofExpression:
+                    return BindSizeofExpression((SizeofExpressionSyntax) node);
                 case SyntaxKind.CompoundExpression:
                     return BindCompoundExpression((CompoundExpressionSyntax) node);
                 case SyntaxKind.ParenthesizedExpression:
@@ -223,6 +225,25 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Binding
             var targetType = BindArrayRankSpecifiers(syntax.ArrayRankSpecifiers, boundTargetType.TypeSymbol);
 
             return BindConversion(syntax.SourceRange, Bind(syntax.Expression, BindExpression), targetType);
+        }
+
+        private BoundExpression BindSizeofExpression(SizeofExpressionSyntax syntax)
+        {
+            // The operand parses as a type, but sizeof also accepts an expression. A bare
+            // identifier is ambiguous, so prefer a type of that name and fall back to a
+            // variable (sizeof(myVar)) before reporting an undeclared type.
+            if (syntax.Type is IdentifierNameSyntax identifierName
+                && !LookupTypeSymbol(identifierName.Name).Any()
+                && LookupSymbols<Symbol>(identifierName.Name).Any())
+            {
+                var boundOperand = Bind((ExpressionSyntax) identifierName, BindExpression);
+                return new BoundSizeofExpression(boundOperand.Type);
+            }
+
+            var boundType = Bind(syntax.Type, x => BindType(x, null));
+            var operandType = BindArrayRankSpecifiers(syntax.ArrayRankSpecifiers, boundType.TypeSymbol);
+
+            return new BoundSizeofExpression(operandType);
         }
 
         private BoundExpression BindCompoundExpression(CompoundExpressionSyntax syntax)

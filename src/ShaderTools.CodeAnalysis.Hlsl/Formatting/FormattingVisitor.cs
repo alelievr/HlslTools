@@ -941,6 +941,25 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Formatting
                 Visit(node.TemplateArgumentList);
         }
 
+        public override void VisitSizeofExpression(SizeofExpressionSyntax node)
+        {
+            // Format like a function call: sizeof(float4).
+            FormatToken(node.OpenParenToken,
+                _options.Spacing.FunctionCallInsertSpaceAfterFunctionName
+                    ? LeadingFormattingOperation.EnsureLeadingWhitespace
+                    : LeadingFormattingOperation.RemoveLeadingWhitespace,
+                _options.Spacing.FunctionCallInsertSpaceWithinArgumentListParentheses
+                    ? TrailingFormattingOperation.EnsureTrailingWhitespace
+                    : TrailingFormattingOperation.RemoveTrailingWhitespace);
+
+            Visit(node.Type);
+
+            foreach (var arrayRankSpecifier in node.ArrayRankSpecifiers)
+                Visit(arrayRankSpecifier);
+
+            FormatCloseParenToken(node.CloseParenToken, _options.Spacing.FunctionCallInsertSpaceWithinArgumentListParentheses);
+        }
+
         public override void VisitCastExpression(CastExpressionSyntax node)
         {
             FormatOpenParenToken(node.OpenParenToken, _options.Spacing.InsertSpacesWithinParenthesesOfTypeCasts);

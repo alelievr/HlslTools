@@ -33,6 +33,47 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Tests.Parser
         }
 
         [Theory]
+        [InlineData("sizeof(uint32_t)", SyntaxKind.PredefinedScalarType)]
+        [InlineData("sizeof(uint)", SyntaxKind.PredefinedScalarType)]
+        [InlineData("sizeof(float4)", SyntaxKind.PredefinedVectorType)]
+        [InlineData("sizeof(float4x4)", SyntaxKind.PredefinedMatrixType)]
+        [InlineData("sizeof(MyStruct)", SyntaxKind.IdentifierName)]
+        [InlineData("sizeof (MyStruct)", SyntaxKind.IdentifierName)]
+        public void TestSizeofExpression(string text, SyntaxKind operandKind)
+        {
+            var expr = ParseExpression(text);
+
+            Assert.NotNull(expr);
+            Assert.Equal(SyntaxKind.SizeofExpression, expr.Kind);
+            Assert.Equal(text, expr.ToString());
+            Assert.Equal(0, expr.GetDiagnostics().Count());
+
+            var sizeofExpression = (SizeofExpressionSyntax) expr;
+            Assert.Equal(SyntaxKind.SizeofKeyword, sizeofExpression.SizeofKeyword.Kind);
+            Assert.Equal(operandKind, sizeofExpression.Type.Kind);
+        }
+
+        [Fact]
+        public void TestSizeofInArithmetic()
+        {
+            var expr = ParseExpression("sizeof(uint) * 4");
+
+            Assert.Equal(SyntaxKind.MultiplyExpression, expr.Kind);
+            Assert.Equal(SyntaxKind.SizeofExpression, ((BinaryExpressionSyntax) expr).Left.Kind);
+            Assert.Equal(0, expr.GetDiagnostics().Count());
+        }
+
+        [Fact]
+        public void TestSizeofWithoutParenthesesIsAnIdentifier()
+        {
+            // 'sizeof' is only an operator when followed by '('.
+            var expr = ParseExpression("sizeof");
+
+            Assert.Equal(SyntaxKind.IdentifierName, expr.Kind);
+            Assert.Equal(0, expr.GetDiagnostics().Count());
+        }
+
+        [Theory]
         [InlineData(SyntaxKind.TrueKeyword)]
         [InlineData(SyntaxKind.FalseKeyword)]
         public void TestPrimaryExpressions(SyntaxKind kind)

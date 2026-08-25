@@ -16,6 +16,7 @@ Modern DirectX Shader Compiler (DXC) / Shader Model 6.x support, a much richer s
 - **Modern scalar types**: `float16_t`/`int16_t`/`uint16_t`, `float32_t`/`int32_t`/`uint32_t`, `int64_t`/`uint64_t` (and their vector/matrix forms).
 - **Wave intrinsics**: the Shader Model 6.0 wave/quad intrinsics plus the Shader Model 6.5 additions (`WaveMatch`, `WaveMultiPrefix*`).
 - **DirectX Raytracing (DXR)**: `TraceRay`/`CallShader`/`ReportHit` with user-defined payload/attribute structs, `RayQuery<>` inline raytracing with its full method set, the `RAY_FLAG_*` / `COMMITTED_*` / `CANDIDATE_*` / `HIT_KIND_*` constants, and the `[shader("...")]` entry attribute.
+- **`sizeof(type)`**: `sizeof(uint32_t)`, `sizeof(float4)`, `sizeof(MyStruct)`, `sizeof(myVar)` — typed as `uint`.
 
 **Editor features**
 

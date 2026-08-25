@@ -44,6 +44,35 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Tests.Binding
             Assert.Equal(0, ErrorCount("void f() { float4 x = (float4) 0; }"));
         }
 
+        // sizeof(type) used to parse as a call to an undefined function 'sizeof' with the type as
+        // a value argument ("Invalid expression term", "undefined symbol").
+        [Theory]
+        [InlineData("sizeof(uint32_t)")]
+        [InlineData("sizeof(uint)")]
+        [InlineData("sizeof(float4)")]
+        [InlineData("sizeof(float4x4)")]
+        [InlineData("sizeof(MyStruct)")]
+        [InlineData("sizeof(MyStruct) * 2")]
+        [InlineData("sizeof(myVar)")]
+        [InlineData("sizeof(uint) + sizeof(MyStruct)")]
+        public void SizeofResolves(string expression)
+        {
+            var code =
+$@"struct MyStruct {{ float4 a; uint b; }};
+void f()
+{{
+    MyStruct myVar;
+    uint size = {expression};
+}}";
+            Assert.Equal(0, ErrorCount(code));
+        }
+
+        [Fact]
+        public void SizeofUnknownTypeReportsError()
+        {
+            Assert.True(ErrorCount("void f() { uint s = sizeof(NoSuchType); }") > 0);
+        }
+
         // #226 - a struct/class method body must be able to reference a field regardless of whether
         // the field is declared before or after the method.
         [Fact]
