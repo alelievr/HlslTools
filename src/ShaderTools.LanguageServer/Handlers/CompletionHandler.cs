@@ -53,13 +53,13 @@ namespace ShaderTools.LanguageServer.Handlers
             }
 
             var completionItems = completionList.Items
-                .Select(x => ConvertCompletionItem(document, completionList.Rules, x))
+                .Select(x => ConvertCompletionItem(document, x, position))
                 .ToArray();
 
             return completionItems;
         }
 
-        private static CompletionItem ConvertCompletionItem(Document document, Microsoft.CodeAnalysis.Completion.CompletionRules completionRules, CodeAnalysis.Completion.CompletionItem item)
+        private static CompletionItem ConvertCompletionItem(Document document, CodeAnalysis.Completion.CompletionItem item, int position)
         {
             var description = CommonCompletionItem.GetDescription(item);
 
@@ -86,6 +86,13 @@ namespace ShaderTools.LanguageServer.Handlers
                 }
             }
 
+            // The item span covers the whole word surrounding the caret. Editing past the
+            // caret would delete text the user already typed to the right of it, so only
+            // replace up to the caret.
+            var editSpan = item.Span;
+            if (editSpan.Start <= position && position < editSpan.End)
+                editSpan = Microsoft.CodeAnalysis.Text.TextSpan.FromBounds(editSpan.Start, position);
+
             return new CompletionItem
             {
                 Label = item.DisplayText,
@@ -95,11 +102,10 @@ namespace ShaderTools.LanguageServer.Handlers
                 TextEdit = new TextEdit
                 {
                     NewText = item.DisplayText,
-                    Range = Helpers.ToRange(document.SourceText, item.Span)
+                    Range = Helpers.ToRange(document.SourceText, editSpan)
                 },
                 Detail = detail,
-                Documentation = documentation,
-                CommitCharacters = completionRules.DefaultCommitCharacters.Select(x => x.ToString()).ToArray()
+                Documentation = documentation
             };
         }
 

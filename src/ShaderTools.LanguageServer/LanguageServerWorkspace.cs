@@ -59,6 +59,19 @@ namespace ShaderTools.LanguageServer
             OnDocumentClosed(documentId);
         }
 
+        /// <summary>
+        /// Forces open documents to re-parse (and re-publish diagnostics), picking up
+        /// external changes such as an edited shadertoolsconfig.json.
+        /// </summary>
+        public void RefreshOpenDocuments()
+        {
+            foreach (var document in CurrentDocuments.Documents.ToArray())
+            {
+                // A fresh SourceText instance guarantees the document is rebuilt.
+                OnDocumentTextChanged(document.Id, SourceText.From(document.SourceText.ToString()));
+            }
+        }
+
         public T GetGlobalService<T>()
             where T : class
         {

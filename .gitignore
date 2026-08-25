@@ -56,3 +56,5 @@ httpd.parse.errors
 *~
 
 binaries/
+# Local release packages (see .github/workflows/release.yml)
+artifacts/

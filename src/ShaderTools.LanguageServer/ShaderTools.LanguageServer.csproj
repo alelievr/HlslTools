@@ -20,6 +20,9 @@
     <PackageReference Include="System.Text.Encoding.Extensions" Version="4.3.0" />
   </ItemGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="ShaderTools.LanguageServer.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\ShaderTools.CodeAnalysis.Hlsl.Features\ShaderTools.CodeAnalysis.Hlsl.Features.csproj" />
     <ProjectReference Include="..\ShaderTools.CodeAnalysis.Hlsl.Workspaces\ShaderTools.CodeAnalysis.Hlsl.Workspaces.csproj" />
     <ProjectReference Include="..\ShaderTools.CodeAnalysis.ShaderLab.Features\ShaderTools.CodeAnalysis.ShaderLab.Features.csproj" />

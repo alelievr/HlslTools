@@ -76,9 +76,14 @@ namespace ShaderTools.LanguageServer
                         Language = x.ToLowerInvariant()
                     }));
 
+            var toggleDefineHandler = new ToggleDefineCommandHandler(_workspace);
+
             _server = await OmniSharp.Extensions.LanguageServer.Server.LanguageServer.From(options => options
                 .WithInput(input)
                 .WithOutput(output)
+                // Matches the configuration sections synchronized by the VS Code client;
+                // without any registered section, OmniSharp logs a warning on startup.
+                .WithConfigurationSection(LanguageNames.Hlsl.ToLowerInvariant())
                 .ConfigureLogging(x => x
                     .AddSerilog(_logger)
                     .AddLanguageProtocolLogging()
@@ -90,7 +95,16 @@ namespace ShaderTools.LanguageServer
                 .AddHandler(new DocumentHighlightHandler(_workspace, documentSelector))
                 .AddHandler(new DocumentSymbolsHandler(_workspace, documentSelector))
                 .AddHandler(new HoverHandler(_workspace, documentSelector))
-                .AddHandler(new SignatureHelpHandler(_workspace, documentSelector)));
+                .AddHandler(new SignatureHelpHandler(_workspace, documentSelector))
+                .AddHandler(new ReferencesHandler(_workspace, documentSelector))
+                .AddHandler(new RenameHandler(_workspace, documentSelector))
+                .AddHandler(new FoldingRangeHandler(_workspace, documentSelector))
+                .AddHandler(new DocumentFormattingHandler(_workspace, documentSelector))
+                .AddHandler(new DocumentRangeFormattingHandler(_workspace, documentSelector))
+                .AddHandler(new DocumentLinkHandler(_workspace, documentSelector))
+                .AddHandler(toggleDefineHandler));
+
+            toggleDefineHandler.Server = _server;
 
             var diagnosticService = _workspace.Services.GetService<IDiagnosticService>();
             _diagnosticNotifier = new DiagnosticNotifier(_server, diagnosticService);

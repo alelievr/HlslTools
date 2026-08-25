@@ -1,6 +1,33 @@
 # Changelog
 
-## Unreleased
+## 1.3.0
+
+Visual Studio Code language server:
+
+- [x] Add **Rename** (`F2`) and **Find All References** (`Shift+F12`), based on the existing semantic usage search. Same-file only for now; rename refuses intrinsics and symbols not defined in the file.
+- [x] Add **code folding** for functions, structs, cbuffers, namespaces, `if`/`else`/`for` blocks and `#if`/`#ifdef` regions.
+- [x] Add **Format Document / Format Selection**, honoring the editor's tab settings.
+- [x] Make **`#include` paths clickable** (`Ctrl+Click`), resolved relative to the including file, then via `hlsl.additionalIncludeDirectories` and `hlsl.virtualDirectoryMappings`.
+- [x] **Gray out code excluded by inactive preprocessor branches** (published as `Unnecessary`-tagged hint diagnostics).
+- [x] Add **define toggles**: a gutter icon on every `#if`/`#ifdef`/`#ifndef`/`#elif` line whose hover offers *Define*/*Undefine* links for the referenced macros. Toggling edits the nearest `shadertoolsconfig.json` (or creates one) and re-parses open documents immediately. Exposed as the `hlslTools.toggleDefine` command; the server confirms each toggle with a notification.
+- [x] Completion no longer auto-commits on space / punctuation (only `Tab` / `Enter` accept), and no longer deletes the text to the right of the caret when accepted mid-word.
+
+Completion (both editors):
+
+- [x] Add **macro completion**: `#define`d macros from the file and its includes (respecting `#undef` and inactive branches) plus `shadertoolsconfig.json` definitions, offered everywhere including inside `#if`/`#ifdef`/`#undef` directives.
+- [x] Only suggest type names where only a type can appear (global scope, struct / cbuffer bodies) - variables and functions are no longer offered where they can't compile.
+- [x] Suggest the predefined object types (`Texture2D`, `StructuredBuffer`, `RWBuffer`, `ConstantBuffer`, `SamplerState`, ...), which were previously never offered because they are parser keywords rather than symbols.
+
+Fixes:
+
+- [x] Fix the lexer advancing past the end of the source text on input truncated mid-token (unterminated string / character literal, trailing `\`, unterminated `#include <`), which threw `ArgumentOutOfRangeException` and could crash the language server.
+- [x] `shadertoolsconfig.json` caching can now be invalidated (used by the define toggles).
+
+Infrastructure:
+
+- [x] Add `ShaderTools.LanguageServer.Tests`, an end-to-end LSP integration test project that drives the real language server over JSON-RPC.
+
+## 1.2.5
 
 - [x] Support the DXC 32-bit explicit-width scalar types `uint32_t`, `int32_t` and `float32_t` (and their vector/matrix forms), as aliases for `uint`/`int`/`float`.
 - [x] Fix a crash in the VS Code language server where hovering over a location with no quick info returned an empty hover, crashing the client's hover converter.

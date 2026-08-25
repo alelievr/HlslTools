@@ -2,7 +2,8 @@ import os = require('os');
 import path = require('path');
 import vscode = require('vscode');
 
-import { LanguageClient, LanguageClientOptions, ServerOptions } from 'vscode-languageclient';
+import { LanguageClient, LanguageClientOptions, RevealOutputChannelOn, ServerOptions } from 'vscode-languageclient';
+import { DirectiveToggleProvider } from './directiveToggles';
 
 let HlslLanguageId = 'hlsl';
 
@@ -24,9 +25,12 @@ export class SessionManager {
     private registeredCommands: vscode.Disposable[] = [];
     private languageServerClient: LanguageClient = undefined;
     private platform: NodeJS.Platform;
+    private extensionContext: vscode.ExtensionContext;
+    private directiveToggleProvider: DirectiveToggleProvider = undefined;
 
-    constructor() {
+    constructor(context: vscode.ExtensionContext) {
         this.platform = os.platform();
+        this.extensionContext = context;
         this.registerCommands();
     }
 
@@ -45,6 +49,11 @@ export class SessionManager {
         this.sessionStatus = SessionStatus.Stopping;
 
         var promise = Promise.resolve();
+
+        if (this.directiveToggleProvider !== undefined) {
+            this.directiveToggleProvider.dispose();
+            this.directiveToggleProvider = undefined;
+        }
 
         // Close the language server client
         if (this.languageServerClient !== undefined) {
@@ -96,7 +105,10 @@ export class SessionManager {
                 documentSelector: LanguageIds,
                 synchronize: {
                     configurationSection: LanguageIds
-                }
+                },
+                // Errors are still written to the output channel, but don't steal focus by
+                // revealing the panel every time a request fails.
+                revealOutputChannelOn: RevealOutputChannelOn.Never
             };
 
             this.languageServerClient =
@@ -111,6 +123,12 @@ export class SessionManager {
                     this.setSessionStatus(
                         'HLSL Tools',
                         SessionStatus.Running);
+
+                    this.directiveToggleProvider = new DirectiveToggleProvider(
+                        this.languageServerClient,
+                        relativePath => this.extensionContext.asAbsolutePath(relativePath));
+
+                    this.ensureToggleDefineCommand();
                 },
                 (reason) => {
                     this.setSessionFailure("Could not start language service: ", reason);
@@ -121,6 +139,27 @@ export class SessionManager {
         {
             this.setSessionFailure("The language service could not be started: ", e);
         }
+    }
+
+    // The language client normally auto-registers commands declared by the server's
+    // executeCommandProvider capability. If that didn't happen for any reason, register a
+    // forwarder ourselves so hover/command links always work.
+    private ensureToggleDefineCommand() {
+        const client = this.languageServerClient;
+
+        vscode.commands.getCommands(true).then(existingCommands => {
+            if (existingCommands.indexOf('hlslTools.toggleDefine') !== -1) {
+                return;
+            }
+
+            this.registeredCommands.push(
+                vscode.commands.registerCommand('hlslTools.toggleDefine', (...args: any[]) => {
+                    return client.sendRequest('workspace/executeCommand', {
+                        command: 'hlslTools.toggleDefine',
+                        arguments: args
+                    });
+                }));
+        });
     }
 
     private getServerPath() {

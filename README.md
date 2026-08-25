@@ -12,7 +12,8 @@ See the [changelog](CHANGELOG.md) for changes.
 
 ### What's new in this fork
 
-This fork extends the original HLSL Tools with modern DXC / Shader Model 6.x support, and fixes several editor issues.
+This fork extends the original HLSL Tools with modern DXC / Shader Model 6.x support, fixes several editor issues,
+and brings the Visual Studio Code extension's language server up to par with (and in places beyond) the Visual Studio extension.
 
 **Language features**
 
@@ -28,8 +29,26 @@ This fork extends the original HLSL Tools with modern DXC / Shader Model 6.x sup
   - Predefined raytracing constants: `RAY_FLAG_*`, `COMMITTED_*`, `CANDIDATE_*`, `HIT_KIND_*`.
   - The `[shader("...")]` and `[maxrecursiondepth(...)]` entry-point attributes.
 
+**Visual Studio Code — new language server features**
+
+Many of these already existed in the Visual Studio extension but had never been wired into the language server used by VS Code; the preprocessor tooling is new to both.
+
+- **Rename** (`F2`) and **Find All References** (`Shift+F12`) for variables, functions, structs, fields, etc. Currently limited to the current file — usages inside `#include`d files aren't edited yet.
+- **Code folding** for functions, structs, cbuffers, namespaces, `if` / `else` / `for` blocks, and `#if` / `#ifdef` regions.
+- **Format Document / Format Selection**, honoring the editor's tab size and spaces/tabs setting.
+- **Clickable `#include` paths** (`Ctrl+Click`), resolved the way the compiler does it: relative to the including file, then `hlsl.additionalIncludeDirectories` and `hlsl.virtualDirectoryMappings` from `shadertoolsconfig.json`.
+- **Grayed-out inactive preprocessor branches** — code excluded by `#if` / `#ifdef` / `#else` is rendered faded, as in the Visual Studio extension.
+- **One-click define toggles** — every `#if` / `#ifdef` / `#ifndef` / `#elif` line gets a gutter icon. Hover it (or the line) for *Define* / *Undefine* links that toggle the referenced macros in `shadertoolsconfig.json`; the file is re-parsed immediately so the active branch, the graying and the diagnostics all flip live. Also exposed as the `hlslTools.toggleDefine` command.
+- **Macro completion** — `#define`d macros (from the file and its includes, respecting `#undef` and inactive branches) and macros predefined in `shadertoolsconfig.json` are offered in completion, including inside `#if` / `#ifdef` / `#undef` directives, which previously had no completion at all.
+- **Smarter statement completion**
+  - Where only a type name can appear (global scope, struct and cbuffer bodies), only types are suggested — no more variables and functions offered where they can't compile.
+  - The predefined object types (`Texture2D`, `StructuredBuffer`, `RWBuffer`, `ConstantBuffer`, `SamplerState`, ...) are now suggested; they were missing entirely before.
+  - Suggestions are only accepted with `Tab` / `Enter`. Typing a space or punctuation no longer commits the highlighted item over what you typed.
+  - Accepting a suggestion in the middle of a word no longer deletes the text to the right of the caret.
+
 **Editor / tooling fixes**
 
+- Fixed the lexer advancing past the end of the source text on input truncated mid-token (e.g. a file ending in an unterminated string or `\`), which threw `ArgumentOutOfRangeException` and could take down the language server.
 - Fixed a Visual Studio Code language-server crash when hovering over a location with no quick info (it returned an empty hover that crashed the client's hover converter).
 - Signature help (parameter hints) now auto-triggers on `(` and `,`.
 - Statement completion now pops up automatically as you type in HLSL files (via a per-language `editor.quickSuggestions` default).
@@ -188,8 +207,9 @@ root is reached or a `shadertoolsconfig.json` file with `"root": true` is found.
 files are found during this search, they will be combined, with properties in closer files taking
 precedence.
 
-Config files are cached for performance reasons. If you make make changes to a config file,
-you'll need to close and re-open any source files that use that config file.
+Config files are cached for performance reasons. If you edit a config file by hand,
+you'll need to close and re-open any source files that use that config file. (Changes made through
+the VS Code define toggles are picked up immediately.)
 
 ### Getting involved
 

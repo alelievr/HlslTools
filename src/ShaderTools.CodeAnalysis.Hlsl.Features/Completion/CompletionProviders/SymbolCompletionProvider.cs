@@ -50,6 +50,7 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Completion.CompletionProviders
             if (syntaxTree.DefinitelyInTypeName(position))
             {
                 GetTypeCompletions(semanticModel, position, context);
+                AddPredefinedTypeKeywordCompletions(context);
             }
             else
             {
@@ -74,15 +75,89 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Completion.CompletionProviders
 
         private static void GetGlobalCompletions(SemanticModel semanticModel, SourceLocation position, CompletionContext context)
         {
+            var syntaxTree = (SyntaxTree) semanticModel.SyntaxTree;
+
             var symbols = semanticModel.LookupSymbols(position)
                 .Where(x => !(x is SemanticSymbol))
                 .Where(x => !(x is AttributeSymbol))
                 .Where(x => x.Locations.Length == 0 || x.Locations.Any(l => l.End < position));
 
-            if (!((SyntaxTree) semanticModel.SyntaxTree).PossiblyInTypeName(position))
+            var possiblyInTypeName = syntaxTree.PossiblyInTypeName(position);
+
+            if (!possiblyInTypeName)
+            {
                 symbols = symbols.Where(x => !(x is TypeSymbol));
+            }
+            else if (syntaxTree.DefinitelyInDeclarationOnlyContext(position))
+            {
+                // Only declarations can appear here, so an identifier must be a type name;
+                // suggesting variables or functions would always produce invalid code.
+                symbols = symbols.Where(x => x is TypeSymbol);
+            }
 
             CreateSymbolCompletions(symbols.Cast<Symbol>(), context);
+
+            if (possiblyInTypeName)
+                AddPredefinedTypeKeywordCompletions(context);
+        }
+
+        // Predefined object types are keywords rather than symbols (they are templated, so
+        // concrete TypeSymbols only exist per instantiation), which means LookupSymbols never
+        // returns them. Offer them explicitly wherever a type name can appear.
+        private static readonly string[] PredefinedTypeKeywordNames =
+        {
+            "AppendStructuredBuffer",
+            "Buffer",
+            "ByteAddressBuffer",
+            "ConstantBuffer",
+            "ConsumeStructuredBuffer",
+            "InputPatch",
+            "LineStream",
+            "OutputPatch",
+            "PointStream",
+            "RWBuffer",
+            "RWByteAddressBuffer",
+            "RWStructuredBuffer",
+            "RWTexture1D",
+            "RWTexture1DArray",
+            "RWTexture2D",
+            "RWTexture2DArray",
+            "RWTexture3D",
+            "RasterizerOrderedBuffer",
+            "RasterizerOrderedByteAddressBuffer",
+            "RasterizerOrderedStructuredBuffer",
+            "RasterizerOrderedTexture1D",
+            "RasterizerOrderedTexture1DArray",
+            "RasterizerOrderedTexture2D",
+            "RasterizerOrderedTexture2DArray",
+            "RasterizerOrderedTexture3D",
+            "StructuredBuffer",
+            "Texture1D",
+            "Texture1DArray",
+            "Texture2D",
+            "Texture2DArray",
+            "Texture2DMS",
+            "Texture2DMSArray",
+            "Texture3D",
+            "TextureCube",
+            "TextureCubeArray",
+            "TriangleStream"
+        };
+
+        private static void AddPredefinedTypeKeywordCompletions(CompletionContext context)
+        {
+            var existingNames = new HashSet<string>(context.Items.Select(x => x.DisplayText));
+
+            foreach (var name in PredefinedTypeKeywordNames)
+            {
+                if (existingNames.Contains(name))
+                    continue;
+
+                context.AddItem(CommonCompletionItem.Create(
+                    name,
+                    Glyph.IntrinsicClass,
+                    (name + " (predefined type)").ToSymbolMarkupTokens()));
+            }
         }
 
         private static void GetMemberCompletions(SemanticModel semanticModel, FieldAccessExpressionSyntax propertyAccessExpression, CompletionContext context)

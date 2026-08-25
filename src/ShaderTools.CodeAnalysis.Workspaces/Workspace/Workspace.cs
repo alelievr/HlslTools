@@ -131,6 +131,15 @@ namespace ShaderTools.CodeAnalysis
         }
 
         /// <summary>
+        /// Clears the cached shadertoolsconfig.json files, so that the next parse re-reads them
+        /// from disk. Call this after a config file has been modified.
+        /// </summary>
+        public void InvalidateConfigFileCache()
+        {
+            _configFiles = ImmutableDictionary<string, ConfigFile>.Empty;
+        }
+
+        /// <summary>
         /// Executes an action as a background task, as part of a sequential queue of tasks.
         /// </summary>
         protected internal Task ScheduleTask(Action action, string taskName = "Workspace.Task")

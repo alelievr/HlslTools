@@ -352,6 +352,59 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Syntax
                 || PossiblyInVariableTypeName(parent, position);
         }
 
+        /// <summary>
+        /// True if the position is in a scope that can only contain declarations - the global scope,
+        /// a namespace, or a struct / class / interface / cbuffer body. In these scopes an identifier
+        /// can only ever be (part of) a type name, never an expression, so completion shouldn't offer
+        /// variables or functions.
+        /// </summary>
+        public static bool DefinitelyInDeclarationOnlyContext(this SyntaxTree tree, SourceLocation position)
+        {
+            if (tree == null)
+                throw new ArgumentNullException(nameof(tree));
+
+            var token = ((SyntaxNode) tree.Root).FindTokenOnLeft(position);
+
+            foreach (var ancestor in token.Parent.AncestorsAndSelf().OfType<SyntaxNode>())
+            {
+                if (ancestor is SyntaxToken)
+                    continue;
+
+                // Skipped tokens attach to a token in a following declaration, so nodes in the
+                // ancestor chain don't necessarily contain the position; ignore those that don't.
+                if (!ancestor.SourceRange.ContainsOrTouches(position))
+                    continue;
+
+                switch (ancestor.Kind)
+                {
+                    // Structural nodes that don't decide the kind of scope; keep walking up.
+                    case SyntaxKind.SkippedTokensTrivia:
+                    case SyntaxKind.IdentifierName:
+                    case SyntaxKind.VariableDeclaration:
+                    case SyntaxKind.VariableDeclarator:
+                    case SyntaxKind.VariableDeclarationStatement:
+                    case SyntaxKind.TypeDeclarationStatement:
+                        continue;
+
+                    // Scopes that only contain declarations.
+                    case SyntaxKind.CompilationUnit:
+                    case SyntaxKind.Namespace:
+                    case SyntaxKind.ConstantBufferDeclaration:
+                    case SyntaxKind.StructType:
+                    case SyntaxKind.ClassType:
+                    case SyntaxKind.InterfaceType:
+                        return true;
+
+                    // Anything else (blocks, expressions, initializers, array ranks, function
+                    // headers, ...) either allows expressions or is too ambiguous to be sure.
+                    default:
+                        return false;
+                }
+            }
+
+            return false;
+        }
+
         private static bool PossiblyInFunctionReturnTypeName(SyntaxNode tokenParent, SourceLocation position)
         {
             var node = tokenParent as FunctionSyntax;

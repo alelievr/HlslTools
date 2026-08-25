@@ -95,6 +95,108 @@ float4 PS(float4 pos : SV_Position) : SV_Target
             await VerifyItemExistsAsync(markup, "MyHelper");
         }
 
+        [Fact]
+        public async Task GlobalScope_VariableNotSuggested_PredefinedTypeSuggested()
+        {
+            var markup = @"Texture2D<uint> _Texture2DBindless;
+Texture2$$
+float4 PS(float4 pos : SV_Position) : SV_Target
+{
+    return 0;
+}";
+
+            await VerifyItemIsAbsentAsync(markup, "_Texture2DBindless");
+            await VerifyItemExistsAsync(markup, "Texture2D");
+        }
+
+        [Fact]
+        public async Task GlobalScope_AtEndOfFile_VariableNotSuggested_PredefinedTypeSuggested()
+        {
+            var markup = @"Texture2D<uint> _Texture2DBindless;
+Texture2$$";
+
+            await VerifyItemIsAbsentAsync(markup, "_Texture2DBindless");
+            await VerifyItemExistsAsync(markup, "Texture2D");
+        }
+
+        [Fact]
+        public async Task GlobalScope_FunctionNotSuggested()
+        {
+            var markup = @"float MyHelper(float x) { return x; }
+MyHel$$";
+
+            await VerifyItemIsAbsentAsync(markup, "MyHelper");
+        }
+
+        [Fact]
+        public async Task StructBody_VariableNotSuggested_PredefinedTypeSuggested()
+        {
+            var markup = @"Texture2D<uint> _Texture2DBindless;
+struct MyStruct
+{
+    Texture2$$
+};";
+
+            await VerifyItemIsAbsentAsync(markup, "_Texture2DBindless");
+            await VerifyItemExistsAsync(markup, "Texture2D");
+        }
+
+        [Fact]
+        public async Task CbufferBody_VariableNotSuggested_PredefinedTypeSuggested()
+        {
+            var markup = @"Texture2D<uint> _Texture2DBindless;
+cbuffer Globals
+{
+    Texture2$$
+};";
+
+            await VerifyItemIsAbsentAsync(markup, "_Texture2DBindless");
+            await VerifyItemExistsAsync(markup, "Texture2D");
+        }
+
+        [Fact]
+        public async Task FunctionBody_BothVariableAndPredefinedTypeSuggested()
+        {
+            var markup = @"Texture2D<uint> _Texture2DBindless;
+float4 PS(float4 pos : SV_Position) : SV_Target
+{
+    Texture2$$
+    return 0;
+}";
+
+            await VerifyItemExistsAsync(markup, "_Texture2DBindless");
+            await VerifyItemExistsAsync(markup, "Texture2D");
+        }
+
+        [Fact]
+        public async Task ParameterType_PredefinedTypeSuggested()
+        {
+            var markup = @"float4 PS(Textu$$)
+{
+    return 0;
+}";
+
+            await VerifyItemExistsAsync(markup, "Texture2D");
+        }
+
+        [Fact]
+        public async Task GlobalScope_UserDefinedTypeSuggested()
+        {
+            var markup = @"struct MyStruct { float x; };
+MyStr$$";
+
+            await VerifyItemExistsAsync(markup, "MyStruct");
+        }
+
+        [Fact]
+        public async Task GlobalInitializer_VariableStillSuggested()
+        {
+            var markup = @"static float _MyGlobal = 2;
+static float _Other = _MyGlo$$;";
+
+            await VerifyItemExistsAsync(markup, "_MyGlobal");
+        }
+
         private async Task VerifyItemExistsAsync(string markup, string expectedItem)
         {
             var completionItems = await GetCompletionItems(markup);
