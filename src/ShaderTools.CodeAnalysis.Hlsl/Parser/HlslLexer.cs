@@ -196,8 +196,12 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Parser
 
         private void NextChar()
         {
+            // The reader doesn't advance past the end of the text, so only count
+            // the segment length when it actually moved.
+            var previousPosition = _charReader.Position;
             _charReader.NextChar();
-            FileSegments.Last().Length++;
+            if (_charReader.Position != previousPosition)
+                FileSegments.Last().Length++;
         }
 
         private SyntaxToken LexSyntaxToken()
@@ -944,7 +948,7 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Parser
             NextChar();
 
             var c = _charReader.Current;
-            if (c == '\'' || c == '\\' || c == '\r' || c == '\n')
+            if (c == '\0' || c == '\'' || c == '\\' || c == '\r' || c == '\n')
             {
                 _diagnostics.ReportInvalidCharacterLiteral(CurrentSpanStart);
             }
@@ -984,6 +988,11 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Parser
                     case '\\':
                         sb.Append(_charReader.Current);
                         NextChar();
+                        if (_charReader.Current == '\0')
+                        {
+                            _diagnostics.ReportUnterminatedString(CurrentSpanStart);
+                            goto ExitLoop;
+                        }
                         sb.Append(_charReader.Current);
                         NextChar();
                         break;

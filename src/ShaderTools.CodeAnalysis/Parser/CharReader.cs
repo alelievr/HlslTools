@@ -1,4 +1,5 @@
-﻿using Microsoft.CodeAnalysis.Text;
+﻿using System;
+using Microsoft.CodeAnalysis.Text;
 
 namespace ShaderTools.CodeAnalysis.Parser
 {
@@ -11,7 +12,14 @@ namespace ShaderTools.CodeAnalysis.Parser
             _text = text;
         }
 
-        public void NextChar() => Position++;
+        // Position is clamped to [0, text.Length]. Tokens are created from spans ending at
+        // Position, so allowing it past the end of the text would make SourceText.GetSubText
+        // throw for input that is truncated mid-token (e.g. a file ending in "\).
+        public void NextChar()
+        {
+            if (Position < _text.Length)
+                Position++;
+        }
 
         public int Position { get; private set; }
 
@@ -29,7 +37,7 @@ namespace ShaderTools.CodeAnalysis.Parser
 
         public void Reset(int position)
         {
-            Position = position;
+            Position = Math.Max(0, Math.Min(position, _text.Length));
         }
     }
 }

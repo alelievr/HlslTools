@@ -100,6 +100,29 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Tests.Parser
         }
 
         [Theory]
+        [InlineData("\"abc\\")]           // Escape backslash at end of file, inside a string.
+        [InlineData("\"abc\\\"")]         // Escaped quote at end of file, string never terminated.
+        [InlineData("\"")]                // Unterminated string at end of file.
+        [InlineData("'")]                 // Character literal quote at end of file.
+        [InlineData("'\\")]               // Character literal with backslash at end of file.
+        [InlineData("'a")]                // Unterminated character literal at end of file.
+        [InlineData("#include \"foo\\")]  // Include directive with backslash at end of file.
+        [InlineData("#include <foo")]     // Unterminated bracketed include at end of file.
+        [InlineData("#define FOO \"a\\")] // Macro body with string escape at end of file.
+        public void HandlesTruncatedInput(string text)
+        {
+            // Regression test: the lexer used to advance past the end of the source text for
+            // inputs truncated mid-token, making later GetSubText calls throw
+            // ArgumentOutOfRangeException.
+            var tokens = LexAllTokens(new SourceFile(SourceText.From(text)));
+            Assert.NotEmpty(tokens);
+            Assert.Equal(SyntaxKind.EndOfFileToken, tokens[tokens.Count - 1].Kind);
+
+            var syntaxTree = SyntaxFactory.ParseSyntaxTree(new SourceFile(SourceText.From(text)));
+            Assert.NotNull(syntaxTree.Root);
+        }
+
+        [Theory]
         [HlslTestSuiteData]
         public void CanLexShader(string testFile)
         {
