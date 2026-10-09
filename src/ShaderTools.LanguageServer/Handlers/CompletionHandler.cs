@@ -33,11 +33,17 @@ namespace ShaderTools.LanguageServer.Handlers
         public async Task<CompletionList> Handle(CompletionParams request, CancellationToken token)
         {
             var (document, position) = _workspace.GetLogicalDocument(request);
+            if (document == null)
+            {
+                return new CompletionList();
+            }
 
             var completionService = document.GetLanguageService<CompletionService>();
 
+            // Context is optional - clients only send it if they declared contextSupport.
             Microsoft.CodeAnalysis.Completion.CompletionTrigger trigger;
-            if (request.Context.TriggerKind == OmniSharp.Extensions.LanguageServer.Protocol.Models.CompletionTriggerKind.TriggerCharacter)
+            if (request.Context?.TriggerKind == OmniSharp.Extensions.LanguageServer.Protocol.Models.CompletionTriggerKind.TriggerCharacter
+                && !string.IsNullOrEmpty(request.Context.TriggerCharacter))
             {
                 trigger = Microsoft.CodeAnalysis.Completion.CompletionTrigger.CreateInsertionTrigger(request.Context.TriggerCharacter[0]);
             }

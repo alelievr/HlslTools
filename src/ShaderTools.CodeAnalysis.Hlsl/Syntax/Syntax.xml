@@ -1663,6 +1663,41 @@
     </Field>
   </Node>
 
+  <Node Name="PayloadAccessQualifierSyntax" Base="VariableDeclaratorQualifierSyntax">
+    <TypeComment>
+      <summary>A DXR payload access qualifier, as in <c>float3 color : read(caller, closesthit);</c>.</summary>
+    </TypeComment>
+    <Kind Name="PayloadAccessQualifier"/>
+    <Field Name="Colon" Type="SyntaxToken">
+      <PropertyComment>
+        <summary></summary>
+      </PropertyComment>
+      <Kind Name="ColonToken"/>
+    </Field>
+    <Field Name="AccessKeyword" Type="SyntaxToken">
+      <PropertyComment>
+        <summary>Gets the <c>read</c> or <c>write</c> identifier.</summary>
+      </PropertyComment>
+    </Field>
+    <Field Name="OpenParenToken" Type="SyntaxToken">
+      <PropertyComment>
+        <summary></summary>
+      </PropertyComment>
+      <Kind Name="OpenParenToken"/>
+    </Field>
+    <Field Name="ShaderStages" Type="SeparatedSyntaxList&lt;SyntaxToken&gt;">
+      <PropertyComment>
+        <summary>Gets the shader stages, such as <c>caller</c>, <c>anyhit</c>, <c>closesthit</c> and <c>miss</c>.</summary>
+      </PropertyComment>
+    </Field>
+    <Field Name="CloseParenToken" Type="SyntaxToken">
+      <PropertyComment>
+        <summary></summary>
+      </PropertyComment>
+      <Kind Name="CloseParenToken"/>
+    </Field>
+  </Node>
+
   <Node Name="RegisterLocation" Base="VariableDeclaratorQualifierSyntax">
     <TypeComment>
       <summary></summary>
@@ -1911,6 +1946,11 @@
         <summary></summary>
       </PropertyComment>
       <Kind Name="StructKeyword"/>
+    </Field>
+    <Field Name="Attributes" Type="List&lt;AttributeDeclarationSyntaxBase&gt;">
+      <PropertyComment>
+        <summary>Gets the attributes between the struct keyword and the name, as in <c>struct [raypayload] Payload</c>.</summary>
+      </PropertyComment>
     </Field>
     <Field Name="Name" Type="SyntaxToken">
       <PropertyComment>

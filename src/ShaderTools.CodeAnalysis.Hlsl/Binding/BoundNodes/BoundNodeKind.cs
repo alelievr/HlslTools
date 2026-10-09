@@ -1,4 +1,4 @@
-namespace ShaderTools.CodeAnalysis.Hlsl.Binding.BoundNodes
+﻿namespace ShaderTools.CodeAnalysis.Hlsl.Binding.BoundNodes
 {
     internal enum BoundNodeKind
     {
@@ -74,6 +74,7 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Binding.BoundNodes
         Semantic,
         PackOffsetLocation,
         RegisterLocation,
+        PayloadAccessQualifier,
         Attribute,
         ErrorExpression,
         Error

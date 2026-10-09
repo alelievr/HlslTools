@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -37,9 +37,12 @@ namespace ShaderTools.LanguageServer.Handlers
 
             // RenameParams doesn't derive from TextDocumentPositionParams, so resolve manually.
             var document = _workspace.GetDocument(request.TextDocument.Uri);
-            var position = document.SourceText.Lines.GetPosition(new LinePosition(
-                request.Position.Line,
-                request.Position.Character));
+            if (document == null)
+            {
+                return new WorkspaceEdit();
+            }
+
+            var position = Helpers.ToPosition(document.SourceText, request.Position);
 
             var semanticModel = await document.GetSemanticModelAsync(token);
             if (semanticModel == null)

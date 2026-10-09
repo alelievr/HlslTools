@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using OmniSharp.Extensions.LanguageServer.Protocol;
@@ -27,6 +27,10 @@ namespace ShaderTools.LanguageServer.Handlers
         public async Task<Container<FoldingRange>> Handle(FoldingRangeRequestParam request, CancellationToken token)
         {
             var document = _workspace.GetDocument(request.TextDocument.Uri);
+            if (document == null)
+            {
+                return new Container<FoldingRange>();
+            }
 
             var blockStructureProvider = document.GetLanguageService<IBlockStructureProvider>();
             if (blockStructureProvider == null)

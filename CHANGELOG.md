@@ -1,4 +1,4 @@
-# Changelog
+﻿# Changelog
 
 ## 1.3.0
 
@@ -17,13 +17,24 @@ Completion (both editors):
 - [x] Add **macro completion**: `#define`d macros from the file and its includes (respecting `#undef` and inactive branches) plus `shadertoolsconfig.json` definitions, offered everywhere including inside `#if`/`#ifdef`/`#undef` directives.
 - [x] Only suggest type names where only a type can appear (global scope, struct / cbuffer bodies) - variables and functions are no longer offered where they can't compile.
 - [x] Suggest the predefined object types (`Texture2D`, `StructuredBuffer`, `RWBuffer`, `ConstantBuffer`, `SamplerState`, ...), which were previously never offered because they are parser keywords rather than symbols.
+- [x] Don't offer macros after a `.` (`MyTexture.` / `color.rg`). Only members of the expression on the left belong there, and the macro list was burying them.
+- [x] Fix completion offering nothing when typing an identifier on a line directly above another statement (e.g. typing `Wav` above `WaveIntrinsics(...);`). The parser glued the two lines into a `Wav WaveIntrinsics` variable declaration, so completion restricted itself to type names. A call statement on the following line is no longer consumed as a declarator, and an unfinished declaration now offers type names *and* variables / functions, since either could be intended.
 
 Language:
 
+- [x] Support **DXR payload access qualifiers** (Shader Model 6.6): the `[raypayload]` attribute between `struct` and the type name, and `: read(...)` / `: write(...)` qualifiers on the members, as in `float3 color : read(caller, closesthit) : write(caller, miss);`. Neither parsed, so the payload struct was cut short at the first qualifier and its type never bound - every `payload.` in every raytracing shader that included it offered no members, and Go to Definition and hover on the payload were dead.
 - [x] Add the `sizeof(type)` operator (DXC): `sizeof(uint32_t)`, `sizeof(float4)`, `sizeof(MyStruct)`, `sizeof(myVar)` bind to a `uint` constant. Previously `sizeof` was parsed as a call to an undefined function with the type as a value argument, producing "Invalid expression term" / "undefined symbol" errors.
 
 Fixes:
 
+- [x] Fix the language server dying (and then dying again on every restart, so the extension went permanently silent) when a request arrived for a document it had never been told about. The null reference was thrown while OmniSharp *routed* the message, which tears down the JSON-RPC message pump rather than just failing that one request. This is the normal state of affairs after a server restart: the client still considers its open documents synced so it doesn't re-send `didOpen`, but it does immediately ask for document symbols / links of the visible editors.
+- [x] Apply the content changes in a `didChange` notification sequentially, as the LSP spec requires, instead of converting them all against the pre-edit text and applying them as a batch. Multi-cursor edits desynchronized the server's copy of the document, which then reported diagnostics at the wrong places and threw on positions past the (stale) end of the file.
+- [x] Handle a content change with no range as the whole-document replacement it is, instead of throwing and silently dropping the edit.
+- [x] Clamp out-of-range LSP positions instead of throwing `ArgumentOutOfRangeException`, and return an empty result rather than faulting when a request names an unopened document.
+- [x] Don't require the optional `context` on a completion request - clients that don't declare `contextSupport` no longer break completion.
+- [x] Recover when the language server exits repeatedly instead of going silently dead until the window is reloaded: the client now reports it and offers a one-click **Restart** (the stock handler stops after 5 exits in 3 minutes and says nothing). This is the usual outcome of updating the extension underneath a running server.
+- [x] Open the server log file shared, and tag every line with the process id. VS Code runs one server per window and they all log to the same path, so previously only the first instance could write and a crash in any other one left no trace. Each instance now also logs a startup line.
+- [x] Stop lower-casing the paths of `#include`d files. The shadertoolsconfig.json cache is keyed on the lower-cased directory, and that key was being used as the path the config loaded from - so every include directory resolved through it, and every included file's path, came back all-lowercase. Go to Definition then handed the editor URIs that didn't match the documents it already had open.
 - [x] Fix the lexer advancing past the end of the source text on input truncated mid-token (unterminated string / character literal, trailing `\`, unterminated `#include <`), which threw `ArgumentOutOfRangeException` and could crash the language server.
 - [x] `shadertoolsconfig.json` caching can now be invalidated (used by the define toggles).
 

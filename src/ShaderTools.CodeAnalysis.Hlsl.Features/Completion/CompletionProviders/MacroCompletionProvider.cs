@@ -38,6 +38,13 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Completion.CompletionProviders
             if (syntaxTree.PossiblyInUserGivenName(position))
                 return;
 
+            // After a '.' only members of the expression on the left are useful. A macro can
+            // technically expand to a member name there ("#define RGB rgb" then "color.RGB"),
+            // but that's vanishingly rare next to the cost: every member list in a real project
+            // would be buried under hundreds of macros.
+            if (syntaxTree.DefinitelyInMemberAccessName(position))
+                return;
+
             var collector = new MacroDirectiveCollector();
             collector.Visit(root);
 

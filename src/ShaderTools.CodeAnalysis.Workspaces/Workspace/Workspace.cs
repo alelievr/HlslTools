@@ -124,10 +124,15 @@ namespace ShaderTools.CodeAnalysis
             if (string.IsNullOrEmpty(directory))
                 return new ConfigFile();
 
+            // The lower-cased path is only meant to be a case-insensitive cache key, but GetOrAdd
+            // passes the *key* to the value factory - so the config file, and every include
+            // directory resolved relative to it, used to be loaded through an all-lowercase path.
+            // That casing then flowed into the file paths of every included file, and out to the
+            // editor as lower-cased URIs that don't match the documents it already has open.
             return ImmutableInterlocked.GetOrAdd(
-                ref _configFiles, 
-                directory.ToLower(), 
-                x => ConfigFileLoader.LoadAndMergeConfigFile(x));
+                ref _configFiles,
+                directory.ToLowerInvariant(),
+                _ => ConfigFileLoader.LoadAndMergeConfigFile(directory));
         }
 
         /// <summary>

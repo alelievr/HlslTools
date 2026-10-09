@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace ShaderTools.CodeAnalysis.Hlsl.Syntax
 {
@@ -6,9 +6,9 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Syntax
     {
         public bool IsClass => Kind == SyntaxKind.ClassType;
 
-        public StructTypeSyntax(SyntaxToken structKeyword, SyntaxToken name, BaseListSyntax baseList, SyntaxToken openBraceToken, List<SyntaxNode> members, SyntaxToken closeBraceToken)
+        public StructTypeSyntax(SyntaxToken structKeyword, List<AttributeDeclarationSyntaxBase> attributes, SyntaxToken name, BaseListSyntax baseList, SyntaxToken openBraceToken, List<SyntaxNode> members, SyntaxToken closeBraceToken)
             : this(structKeyword.Kind == SyntaxKind.ClassKeyword ? SyntaxKind.ClassType : SyntaxKind.StructType,
-                   structKeyword, name, baseList, openBraceToken, members, closeBraceToken)
+                   structKeyword, attributes, name, baseList, openBraceToken, members, closeBraceToken)
         {
         }
     }

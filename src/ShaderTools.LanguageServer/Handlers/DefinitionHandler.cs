@@ -27,6 +27,10 @@ namespace ShaderTools.LanguageServer.Handlers
         public async Task<LocationOrLocationLinks> Handle(DefinitionParams request, CancellationToken token)
         {
             var (document, position) = _workspace.GetLogicalDocument(request);
+            if (document == null)
+            {
+                return new LocationOrLocationLinks();
+            }
 
             var goToDefinitionService = document.GetLanguageService<IGoToDefinitionService>();
             var definitions = await goToDefinitionService.FindDefinitionsAsync(document, position, token);

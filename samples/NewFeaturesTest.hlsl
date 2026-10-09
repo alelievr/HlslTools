@@ -124,7 +124,7 @@ void RayGen()
     TraceRay(Scene, flags, 0xFF, 0, 1, 0, ray, payload);
 
     CallableData cd;
-    cd.value  = 1;
+    cd.value  = sizeof(uint32_t);
     cd.weight = 0.5;
     CallShader(0, cd);
 

@@ -28,6 +28,10 @@ namespace ShaderTools.LanguageServer.Handlers
         public async Task<DocumentHighlightContainer> Handle(DocumentHighlightParams request, CancellationToken token)
         {
             var (document, position) = _workspace.GetLogicalDocument(request);
+            if (document == null)
+            {
+                return new DocumentHighlightContainer();
+            }
 
             var documentHighlightsService = _workspace.Services.GetService<IDocumentHighlightsService>();
 

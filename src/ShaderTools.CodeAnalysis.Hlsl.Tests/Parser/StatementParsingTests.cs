@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using ShaderTools.CodeAnalysis.Hlsl.Syntax;
 using Xunit;
 
@@ -1157,6 +1158,40 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Tests.Parser
             Assert.Equal("Vector", typedefStatement.Declarators[1].Identifier.Text);
 
             Assert.NotNull(typedefStatement.SemicolonToken);
+        }
+
+        [Fact]
+        public void TestIncompleteTypeNameFollowedByCallStatementOnNextLine()
+        {
+            // The identifier on the next line starts a call statement, so it must not be glued onto
+            // the incomplete declaration as its declarator.
+            var text = "Wav" + Environment.NewLine + "WaveIntrinsics(x, y);";
+            var statement = ParseStatement(text);
+
+            Assert.NotNull(statement);
+            Assert.Equal(SyntaxKind.VariableDeclarationStatement, statement.Kind);
+
+            var declaration = ((VariableDeclarationStatementSyntax) statement).Declaration;
+            Assert.Equal(SyntaxKind.IdentifierName, declaration.Type.Kind);
+            Assert.Equal("Wav", declaration.Type.ToString().Trim());
+            Assert.Equal(1, declaration.Variables.Count);
+            Assert.True(declaration.Variables[0].Identifier.IsMissing);
+        }
+
+        [Fact]
+        public void TestTypeNameFollowedByCallOnSameLineIsDeclarator()
+        {
+            // Without an intervening line break there's no reason to think we've run into the next
+            // statement, so the greedy parse stands.
+            var text = "Wav WaveIntrinsics(x, y);";
+            var statement = ParseStatement(text);
+
+            Assert.NotNull(statement);
+            Assert.Equal(SyntaxKind.VariableDeclarationStatement, statement.Kind);
+
+            var declaration = ((VariableDeclarationStatementSyntax) statement).Declaration;
+            Assert.Equal(1, declaration.Variables.Count);
+            Assert.Equal("WaveIntrinsics", declaration.Variables[0].Identifier.Text);
         }
 
         private static StatementSyntax ParseStatement(string text)

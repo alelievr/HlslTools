@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -97,6 +97,77 @@ float x = LER$$;";
 float x = HIDD$$;";
 
             await VerifyItemIsAbsentAsync(markup, "HIDDEN_MACRO");
+        }
+
+        [Fact]
+        public async Task AfterMemberAccessDot_NotInCompletionList()
+        {
+            // Only members of the expression on the left can appear after a '.'.
+            var markup = @"#define MY_MACRO 1
+Texture2D MyTexture;
+float4 PS() : SV_Target
+{
+    MyTexture.$$
+    return 0;
+}";
+
+            await VerifyItemIsAbsentAsync(markup, "MY_MACRO");
+        }
+
+        [Fact]
+        public async Task WhileTypingMemberName_NotInCompletionList()
+        {
+            var markup = @"#define MY_MACRO 1
+Texture2D MyTexture;
+float4 PS() : SV_Target
+{
+    MyTexture.MY_MA$$
+    return 0;
+}";
+
+            await VerifyItemIsAbsentAsync(markup, "MY_MACRO");
+        }
+
+        [Fact]
+        public async Task AfterSwizzleDot_NotInCompletionList()
+        {
+            var markup = @"#define MY_MACRO 1
+float4 PS(float4 color : SV_Target) : SV_Target
+{
+    float f = color.$$;
+    return 0;
+}";
+
+            await VerifyItemIsAbsentAsync(markup, "MY_MACRO");
+        }
+
+        [Fact]
+        public async Task ArgumentOfMethodCallOnObject_InCompletionList()
+        {
+            // Inside the call parens we're past the member name, so macros are back in play.
+            var markup = @"#define MY_MACRO 1
+Texture2D MyTexture;
+SamplerState MySampler;
+float4 PS(float2 uv : TEXCOORD) : SV_Target
+{
+    return MyTexture.Sample(MySampler, uv * MY_MA$$);
+}";
+
+            await VerifyItemExistsAsync(markup, "MY_MACRO");
+        }
+
+        [Fact]
+        public async Task ExpressionBeforeTheDot_InCompletionList()
+        {
+            // The receiver position is an ordinary expression - a macro can legitimately go here.
+            var markup = @"#define MY_MACRO 1
+float4 PS(float4 color : SV_Target) : SV_Target
+{
+    float f = MY_MA$$.x;
+    return 0;
+}";
+
+            await VerifyItemExistsAsync(markup, "MY_MACRO");
         }
 
         private async Task VerifyItemExistsAsync(string markup, string expectedItem)

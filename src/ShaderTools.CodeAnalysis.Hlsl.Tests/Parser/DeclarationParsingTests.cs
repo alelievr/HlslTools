@@ -733,6 +733,87 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Tests.Parser
             Assert.Equal(1, fd.Attributes.Count);
         }
 
+        [Fact]
+        public void TestRayPayloadAttributeOnStruct()
+        {
+            // DXR allows an attribute between the struct keyword and the name.
+            var text = "struct [raypayload] Payload { float3 color; }; ";
+            var file = ParseFile(text);
+
+            Assert.NotNull(file);
+            Assert.Empty(file.GetDiagnostics());
+            Assert.Equal(text, file.ToString());
+            Assert.Equal(1, file.Declarations.Count);
+
+            var fd = (TypeDeclarationStatementSyntax) file.Declarations[0];
+            var st = (StructTypeSyntax) fd.Type;
+            Assert.Equal(1, st.Attributes.Count);
+            Assert.Equal("Payload", st.Name.Text);
+            Assert.Equal(1, st.Members.Count);
+        }
+
+        [Fact]
+        public void TestPayloadAccessQualifiers()
+        {
+            var text = "struct [raypayload] Payload { float3 color : read(caller, closesthit) : write(caller, closesthit, miss); }; ";
+            var file = ParseFile(text);
+
+            Assert.NotNull(file);
+            Assert.Empty(file.GetDiagnostics());
+            Assert.Equal(text, file.ToString());
+
+            var fd = (TypeDeclarationStatementSyntax) file.Declarations[0];
+            var st = (StructTypeSyntax) fd.Type;
+            var vd = (VariableDeclarationStatementSyntax) st.Members[0];
+            var declarator = vd.Declaration.Variables[0];
+
+            Assert.Equal(2, declarator.Qualifiers.Count);
+
+            var read = (PayloadAccessQualifierSyntax) declarator.Qualifiers[0];
+            Assert.Equal(SyntaxKind.PayloadAccessQualifier, read.Kind);
+            Assert.Equal("read", read.AccessKeyword.Text);
+            Assert.Equal(2, read.ShaderStages.Count);
+            Assert.Equal("caller", read.ShaderStages[0].Text);
+            Assert.Equal("closesthit", read.ShaderStages[1].Text);
+
+            var write = (PayloadAccessQualifierSyntax) declarator.Qualifiers[1];
+            Assert.Equal("write", write.AccessKeyword.Text);
+            Assert.Equal(3, write.ShaderStages.Count);
+        }
+
+        [Fact]
+        public void TestPayloadAccessQualifierWithNoWhitespaceBeforeColon()
+        {
+            var text = "struct [raypayload] Payload { uint32_t sampleIndex: read(closesthit) : write(caller); }; ";
+            var file = ParseFile(text);
+
+            Assert.NotNull(file);
+            Assert.Empty(file.GetDiagnostics());
+            Assert.Equal(text, file.ToString());
+        }
+
+        [Fact]
+        public void TestSemanticIsStillParsedAsSemantic()
+        {
+            // 'read' and 'write' are only qualifiers when followed by an argument list; every
+            // other ': identifier' must keep parsing as an ordinary semantic.
+            var text = "struct VsOut { float4 position : SV_Position; float3 read : COLOR; }; ";
+            var file = ParseFile(text);
+
+            Assert.NotNull(file);
+            Assert.Empty(file.GetDiagnostics());
+            Assert.Equal(text, file.ToString());
+
+            var fd = (TypeDeclarationStatementSyntax) file.Declarations[0];
+            var st = (StructTypeSyntax) fd.Type;
+            foreach (var member in st.Members)
+            {
+                var vd = (VariableDeclarationStatementSyntax) member;
+                var qualifier = vd.Declaration.Variables[0].Qualifiers[0];
+                Assert.Equal(SyntaxKind.SemanticName, qualifier.Kind);
+            }
+        }
+
         private static CompilationUnitSyntax ParseFile(string text)
         {
             return SyntaxFactory.ParseCompilationUnit(new SourceFile(SourceText.From(text)));

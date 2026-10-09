@@ -197,6 +197,105 @@ static float _Other = _MyGlo$$;";
             await VerifyItemExistsAsync(markup, "_MyGlobal");
         }
 
+        [Fact]
+        public async Task FunctionBody_NextLineIsCall_FunctionAndTypeSuggested()
+        {
+            // The greedy parse glues "Wav" and the call on the next line into a "Wav WaveIntrinsics"
+            // variable declaration, which used to restrict completion to type names only.
+            var markup = @"Texture2D<uint> _Texture2DBindless;
+void WaveIntrinsics(float a, int b) { }
+float4 PS(float4 pos : SV_Position) : SV_Target
+{
+    Wav$$
+    WaveIntrinsics(pos.x, (int) pos.y);
+    return 0;
+}";
+
+            await VerifyItemExistsAsync(markup, "WaveIntrinsics");
+            await VerifyItemExistsAsync(markup, "WaveActiveSum");
+            await VerifyItemExistsAsync(markup, "pos");
+            await VerifyItemExistsAsync(markup, "_Texture2DBindless");
+            await VerifyItemExistsAsync(markup, "Texture2D");
+        }
+
+        [Fact]
+        public async Task FunctionBody_NextLineIsAssignment_FunctionAndTypeSuggested()
+        {
+            // "Wav color" parses as a complete variable declaration with an initializer, so the
+            // position is ambiguous - both a type name and an expression are valid here.
+            var markup = @"Texture2D<uint> _Texture2DBindless;
+void WaveIntrinsics(float a, int b) { }
+float4 PS(float4 pos : SV_Position) : SV_Target
+{
+    float4 color;
+    Wav$$
+    color = float4(0, 0, 0, 1);
+    return color;
+}";
+
+            await VerifyItemExistsAsync(markup, "WaveIntrinsics");
+            await VerifyItemExistsAsync(markup, "color");
+            await VerifyItemExistsAsync(markup, "_Texture2DBindless");
+            await VerifyItemExistsAsync(markup, "Texture2D");
+        }
+
+        [Fact]
+        public async Task FunctionBody_NextLineIsMemberAccess_FunctionAndTypeSuggested()
+        {
+            var markup = @"Texture2D<uint> _Texture2DBindless;
+void WaveIntrinsics(float a, int b) { }
+float4 PS(float4 pos : SV_Position) : SV_Target
+{
+    float4 color;
+    Wav$$
+    color.x = 1;
+    return color;
+}";
+
+            await VerifyItemExistsAsync(markup, "WaveIntrinsics");
+            await VerifyItemExistsAsync(markup, "color");
+            await VerifyItemExistsAsync(markup, "Texture2D");
+        }
+
+        [Fact]
+        public async Task VariableDeclaration_TypeAndDeclaratorOnSameLine_VariableNotSuggested()
+        {
+            // A declarator on the same line as the type is a real declaration, so only type names
+            // make sense in the type position.
+            var markup = @"Texture2D<uint> _Texture2DBindless;
+struct MyStruct { float x; };
+float4 PS(float4 pos : SV_Position) : SV_Target
+{
+    MyStr$$ myLocal;
+    return 0;
+}";
+
+            await VerifyItemExistsAsync(markup, "MyStruct");
+            await VerifyItemIsAbsentAsync(markup, "_Texture2DBindless");
+            await VerifyItemIsAbsentAsync(markup, "pos");
+        }
+
+        [Fact]
+        public async Task RayPayloadStructMembers_InCompletionList()
+        {
+            // The [raypayload] attribute and the read()/write() access qualifiers used to stop
+            // the struct from parsing, so the payload type never bound and member access on it
+            // offered nothing.
+            var markup = @"struct [raypayload] RayPayload
+{
+    float3 color : read(caller, closesthit) : write(caller, closesthit, miss);
+    uint32_t depth: read(caller, closesthit) : write(caller, closesthit);
+};
+
+void closest_hit(inout RayPayload payload)
+{
+    payload.$$
+}";
+
+            await VerifyItemExistsAsync(markup, "color");
+            await VerifyItemExistsAsync(markup, "depth");
+        }
+
         private async Task VerifyItemExistsAsync(string markup, string expectedItem)
         {
             var completionItems = await GetCompletionItems(markup);

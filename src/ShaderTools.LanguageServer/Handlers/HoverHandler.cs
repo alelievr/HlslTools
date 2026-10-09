@@ -27,6 +27,10 @@ namespace ShaderTools.LanguageServer.Handlers
         public async Task<Hover> Handle(HoverParams request, CancellationToken token)
         {
             var (document, position) = _workspace.GetLogicalDocument(request);
+            if (document == null)
+            {
+                return null;
+            }
 
             var quickInfoService = document.LanguageServices.GetRequiredService<QuickInfoService>();
 

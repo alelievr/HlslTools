@@ -27,6 +27,10 @@ namespace ShaderTools.LanguageServer.Handlers
         public Task<SignatureHelp> Handle(SignatureHelpParams request, CancellationToken token)
         {
             var (document, position) = _workspace.GetLogicalDocument(request);
+            if (document == null)
+            {
+                return Task.FromResult<SignatureHelp>(null);
+            }
 
             var signatureHelpService = _workspace.Services.GetService<SignatureHelpService>();
 

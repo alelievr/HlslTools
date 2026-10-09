@@ -38,9 +38,9 @@ namespace ShaderTools.LanguageServer.Tests
             _serverOutput = new AnonymousPipeClientStream(PipeDirection.Out, _serverToClient.GetClientHandleAsString());
         }
 
-        public Task StartAsync()
+        public Task StartAsync(string logFilePath = null)
         {
-            var logPath = Path.Combine(Path.GetTempPath(), "ShaderToolsTest-" + Guid.NewGuid().ToString("N"));
+            var logPath = logFilePath ?? Path.Combine(Path.GetTempPath(), "ShaderToolsTest-" + Guid.NewGuid().ToString("N"));
 
             // Note: Create doesn't complete until the client sends the initialize request,
             // so it must not be awaited here.

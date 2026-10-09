@@ -1,3 +1,4 @@
+﻿using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,6 +33,10 @@ namespace ShaderTools.LanguageServer.Handlers
         public Task<TextEditContainer> Handle(DocumentFormattingParams request, CancellationToken token)
         {
             var document = _workspace.GetDocument(request.TextDocument.Uri);
+            if (document == null)
+            {
+                return Task.FromResult(new TextEditContainer());
+            }
 
             return FormattingHelpers.GetFormattingEdits(
                 document,
@@ -65,14 +70,18 @@ namespace ShaderTools.LanguageServer.Handlers
         public Task<TextEditContainer> Handle(DocumentRangeFormattingParams request, CancellationToken token)
         {
             var document = _workspace.GetDocument(request.TextDocument.Uri);
+            if (document == null)
+            {
+                return Task.FromResult(new TextEditContainer());
+            }
 
             var sourceText = document.SourceText;
-            var start = sourceText.Lines.GetPosition(new LinePosition(request.Range.Start.Line, request.Range.Start.Character));
-            var end = sourceText.Lines.GetPosition(new LinePosition(request.Range.End.Line, request.Range.End.Character));
+            var start = Helpers.ToPosition(sourceText, request.Range.Start);
+            var end = Helpers.ToPosition(sourceText, request.Range.End);
 
             return FormattingHelpers.GetFormattingEdits(
                 document,
-                TextSpan.FromBounds(start, end),
+                TextSpan.FromBounds(start, Math.Max(start, end)),
                 request.Options,
                 token);
         }

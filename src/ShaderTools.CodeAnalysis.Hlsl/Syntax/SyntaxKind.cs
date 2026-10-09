@@ -1,4 +1,4 @@
-namespace ShaderTools.CodeAnalysis.Hlsl.Syntax
+﻿namespace ShaderTools.CodeAnalysis.Hlsl.Syntax
 {
     public enum SyntaxKind
     {
@@ -600,6 +600,7 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Syntax
         RegisterLocation,
         LogicalRegisterSpace,
         SemanticName,
+        PayloadAccessQualifier,
 
         StateProperty,
 

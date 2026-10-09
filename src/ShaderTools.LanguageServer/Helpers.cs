@@ -80,19 +80,37 @@ namespace ShaderTools.LanguageServer
             }
         }
 
-        public static TextChange ToTextChange(Document document, Range changeRange, string insertString)
+        public static TextChange ToTextChange(SourceText sourceText, Range changeRange, string insertString)
         {
-            var startPosition = document.SourceText.Lines.GetPosition(ToLinePosition(changeRange.Start));
-            var endPosition = document.SourceText.Lines.GetPosition(ToLinePosition(changeRange.End));
+            var startPosition = ToPosition(sourceText, changeRange.Start);
+            var endPosition = ToPosition(sourceText, changeRange.End);
 
             return new TextChange(
-                TextSpan.FromBounds(startPosition, endPosition), 
+                TextSpan.FromBounds(startPosition, Math.Max(startPosition, endPosition)),
                 insertString);
         }
 
-        private static LinePosition ToLinePosition(Position position)
+        /// <summary>
+        /// Converts an LSP line/character to an offset, clamped to the text. The editor's copy of a
+        /// document and ours can briefly disagree about its length, and an out-of-range line used to
+        /// throw ArgumentOutOfRangeException out of <see cref="TextLineCollection.GetPosition"/> and
+        /// fail the request.
+        /// </summary>
+        public static int ToPosition(SourceText sourceText, Position position)
         {
-            return new LinePosition((int)position.Line, (int) position.Character);
+            var lines = sourceText.Lines;
+
+            if (lines.Count == 0)
+            {
+                return 0;
+            }
+
+            var lineNumber = Math.Max(0, Math.Min((int) position.Line, lines.Count - 1));
+            var line = lines[lineNumber];
+
+            var character = Math.Max(0, Math.Min((int) position.Character, line.SpanIncludingLineBreak.Length));
+
+            return Math.Min(line.Start + character, sourceText.Length);
         }
 
         public static async Task FindSymbolsInDocument(

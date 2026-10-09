@@ -80,6 +80,9 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Binding
                 case BoundNodeKind.PackOffsetLocation:
                     VisitPackOffsetLocation((BoundPackOffsetLocation)node);
                     break;
+                case BoundNodeKind.PayloadAccessQualifier:
+                    VisitPayloadAccessQualifier((BoundPayloadAccessQualifier) node);
+                    break;
                 default:
                     throw new InvalidOperationException(node.Kind.ToString());
             }
@@ -93,6 +96,11 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Binding
         protected virtual void VisitRegisterLocation(BoundRegisterLocation node)
         {
             
+        }
+
+        protected virtual void VisitPayloadAccessQualifier(BoundPayloadAccessQualifier node)
+        {
+
         }
 
         protected virtual void VisitPackOffsetLocation(BoundPackOffsetLocation node)

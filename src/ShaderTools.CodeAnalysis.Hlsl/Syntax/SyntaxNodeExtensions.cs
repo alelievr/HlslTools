@@ -262,6 +262,32 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Syntax
             return token.Ancestors().OfType<VariableDeclaratorQualifierSyntax>().Any();
         }
 
+        /// <summary>
+        /// True if the position is where a member name goes - directly after a '.', or inside the
+        /// identifier that follows one (<c>myTexture.|</c>, <c>myColor.rg|b</c>). Only members of
+        /// the expression on the left belong here.
+        /// </summary>
+        public static bool DefinitelyInMemberAccessName(this SyntaxTree tree, SourceLocation position)
+        {
+            if (tree == null)
+                throw new ArgumentNullException(nameof(tree));
+
+            var token = ((SyntaxNode) tree.Root).FindTokenOnLeft(position);
+
+            // "myTexture.|"
+            if (token.Kind == SyntaxKind.DotToken)
+                return true;
+
+            // "myTexture.Sam|" - the member name is being typed.
+            if (token.Kind == SyntaxKind.IdentifierToken && token.SourceRange.ContainsOrTouches(position))
+            {
+                var previous = (SyntaxToken) token.GetPreviousToken(includeZeroLength: false, includeSkippedTokens: true);
+                return previous != null && previous.Kind == SyntaxKind.DotToken;
+            }
+
+            return false;
+        }
+
         public static bool PossiblyInUserGivenName(this SyntaxTree tree, SourceLocation position)
         {
             if (tree == null)
@@ -326,6 +352,15 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Syntax
             if (parent is ParameterSyntax p && token.Ancestors().Contains(p.Type))
                 return true;
 
+            // The declaration is incomplete - the user is still typing it - so DefinitelyInTypeName
+            // bailed out on the syntax errors. A type name is still one of the things that can go here.
+            if (PossiblyInFunctionReturnTypeName(parent, position)
+                || PossiblyInParameterTypeName(parent, position)
+                || PossiblyInVariableTypeName(parent, position))
+            {
+                return true;
+            }
+
             // User might be typing a cast expression.
             if (parent.Kind == SyntaxKind.ParenthesizedExpression && ((ParenthesizedExpressionSyntax) parent).Expression.Kind == SyntaxKind.IdentifierName)
                 return true;
@@ -347,9 +382,22 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Syntax
             if (parent.ContainsDiagnostics)
                 return false;
 
+            // A variable declaration whose type is on a line of its own is ambiguous: the parser is
+            // greedy, so an identifier alone on a line followed by a statement starting with an
+            // identifier gets glued together into "<type> <declarator>" (see
+            // HlslParser.ParseVariableDeclarator). The user is just as likely to be typing a new
+            // statement, so this isn't *definitely* a type name - PossiblyInTypeName still is true,
+            // which keeps type names in the completion list alongside variables and functions.
+            if (PossiblyInVariableTypeName(parent, position))
+                return !IsFollowedByLineBreak(token);
+
             return PossiblyInFunctionReturnTypeName(parent, position)
-                || PossiblyInParameterTypeName(parent, position)
-                || PossiblyInVariableTypeName(parent, position);
+                || PossiblyInParameterTypeName(parent, position);
+        }
+
+        private static bool IsFollowedByLineBreak(SyntaxToken token)
+        {
+            return token.TrailingTrivia.Any(t => t.Kind == SyntaxKind.EndOfLineTrivia);
         }
 
         /// <summary>

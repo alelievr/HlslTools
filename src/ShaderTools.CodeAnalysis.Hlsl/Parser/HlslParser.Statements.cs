@@ -175,10 +175,11 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Parser
                 // So, if we're after a newline and we see a name followed by the list below, then we
                 // assume that we're accidently consuming too far into the next statement.
                 //
-                // <dot>, <arrow>, any binary operator (except =), <question>.  None of these characters
-                // are allowed in a normal variable declaration.  This also provides a more useful error
-                // message to the user.  Instead of telling them that a semicolon is expected after the
-                // following token, then instead get a useful message about an identifier being missing.
+                // <dot>, <arrow>, any binary operator (except =), <question>, <open paren>.  None of
+                // these characters are allowed in a normal variable declaration.  This also provides a
+                // more useful error message to the user.  Instead of telling them that a semicolon is
+                // expected after the following token, then instead get a useful message about an
+                // identifier being missing.
                 // The above list prevents:
                 //
                 // C                    //<-- here
@@ -192,6 +193,14 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Parser
                 //
                 // C 
                 // A ? B : D;
+                //
+                // C 
+                // Foo(x); // a call statement, not a declaration of a variable named "Foo".
+                //
+                // HLSL has no constructor-style initializers, and wherever a function declaration is
+                // legal (global scope, struct / class members) IsPossibleFunctionDeclaration claims
+                // "<type> <name> (" before we get here - so an open paren after the name always
+                // means we've run into the next statement.
                 var resetPoint = GetResetPoint();
                 try
                 {
@@ -209,6 +218,7 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Parser
                                 SyntaxFacts.IsBinaryExpression(currentTokenKind);
 
                             if (currentTokenKind == SyntaxKind.DotToken ||
+                                currentTokenKind == SyntaxKind.OpenParenToken ||
                                 isNonEqualsBinaryToken)
                             {
                                 var missingIdentifier = InsertMissingToken(SyntaxKind.IdentifierToken);
@@ -403,8 +413,24 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Parser
                 case SyntaxKind.PackoffsetKeyword:
                     return ParsePackOffsetLocation();
                 default:
+                    if (IsPayloadAccessQualifier())
+                        return ParsePayloadAccessQualifier();
                     return ParseSemantic();
             }
+        }
+
+        /// <summary>
+        /// A DXR payload access qualifier looks like a semantic followed by an argument list:
+        /// <c>: read(caller, closesthit)</c>. Only 'read' and 'write' are qualifiers - anything
+        /// else followed by '(' is malformed, and is better reported as a bad semantic.
+        /// </summary>
+        private bool IsPayloadAccessQualifier()
+        {
+            if (Lookahead.Kind != SyntaxKind.IdentifierToken || Peek(2).Kind != SyntaxKind.OpenParenToken)
+                return false;
+
+            var text = Lookahead.Text;
+            return text == "read" || text == "write";
         }
 
         private ExpressionSyntax ParseVariableInitializer()

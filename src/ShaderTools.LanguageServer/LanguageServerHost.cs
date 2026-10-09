@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -47,10 +48,25 @@ namespace ShaderTools.LanguageServer
         {
             var exportProvider = CreateHostServices();
 
+            // VS Code runs one server per window, and they all log to the same path. Without
+            // shared: true only the first instance to open the file can write, so a crash in any
+            // other one leaves no trace at all - which makes the log useless exactly when it's
+            // needed. The pid in each line keeps the interleaved instances apart.
             var logger = new LoggerConfiguration()
                 .Enrich.FromLogContext()
-                .WriteTo.File(logFilePath)
+                .Enrich.WithProperty("ProcessId", Process.GetCurrentProcess().Id)
+                .WriteTo.File(
+                    logFilePath,
+                    shared: true,
+                    outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] (pid {ProcessId}) {Message:lj}{NewLine}{Exception}")
                 .CreateLogger();
+
+            // One line per instance, so the log says which servers were alive and when they
+            // started. Without it a log holding only crash dumps gives no way to tell which
+            // instance produced them, or whether a silent instance ever ran at all.
+            logger.Information(
+                "Language server starting (version {Version}).",
+                typeof(LanguageServerHost).Assembly.GetName().Version);
 
             var result = new LanguageServerHost(exportProvider, logger, minLogLevel);
 

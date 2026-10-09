@@ -25,6 +25,9 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Parser
         {
             var @struct = Match(syntaxKind);
 
+            // DXR allows an attribute between the keyword and the name: struct [raypayload] Payload { ... }
+            var attributes = ParseAttributes();
+
             // Name is optional -  but if omitted, this *must* be part of a variable declaration.
             var name = NextTokenIf(SyntaxKind.IdentifierToken);
 
@@ -54,7 +57,7 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Parser
 
             var closeBrace = Match(SyntaxKind.CloseBraceToken);
 
-            return new StructTypeSyntax(@struct, name, baseList, openBrace, members, closeBrace);
+            return new StructTypeSyntax(@struct, attributes, name, baseList, openBrace, members, closeBrace);
         }
 
         private InterfaceTypeSyntax ParseInterfaceType()
@@ -253,6 +256,33 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Parser
             var semantic = Match(SyntaxKind.IdentifierToken);
 
             return new SemanticSyntax(colon, semantic);
+        }
+
+        /// <summary>
+        /// Parses a DXR payload access qualifier, as in
+        /// <c>float3 color : read(caller, closesthit) : write(caller, miss);</c>.
+        /// </summary>
+        private PayloadAccessQualifierSyntax ParsePayloadAccessQualifier()
+        {
+            var colon = Match(SyntaxKind.ColonToken);
+            var accessKeyword = Match(SyntaxKind.IdentifierToken);
+            var openParen = Match(SyntaxKind.OpenParenToken);
+
+            var shaderStages = new List<SyntaxNodeBase>();
+            if (Current.Kind != SyntaxKind.CloseParenToken)
+            {
+                shaderStages.Add(Match(SyntaxKind.IdentifierToken));
+
+                while (Current.Kind == SyntaxKind.CommaToken)
+                {
+                    shaderStages.Add(Match(SyntaxKind.CommaToken));
+                    shaderStages.Add(Match(SyntaxKind.IdentifierToken));
+                }
+            }
+
+            var closeParen = Match(SyntaxKind.CloseParenToken);
+
+            return new PayloadAccessQualifierSyntax(colon, accessKeyword, openParen, new SeparatedSyntaxList<SyntaxToken>(shaderStages), closeParen);
         }
 
         private ConstantBufferSyntax ParseConstantBuffer()

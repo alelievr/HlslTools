@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using OmniSharp.Extensions.LanguageServer.Protocol;
@@ -26,6 +26,10 @@ namespace ShaderTools.LanguageServer.Handlers
         public async Task<LocationContainer> Handle(ReferenceParams request, CancellationToken token)
         {
             var (document, position) = _workspace.GetLogicalDocument(request);
+            if (document == null)
+            {
+                return new LocationContainer();
+            }
 
             var semanticModel = await document.GetSemanticModelAsync(token);
             if (semanticModel == null)

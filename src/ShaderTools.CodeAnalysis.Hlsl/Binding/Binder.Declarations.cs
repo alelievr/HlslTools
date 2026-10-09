@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -159,6 +159,9 @@ namespace ShaderTools.CodeAnalysis.Hlsl.Binding
                     return new BoundRegisterLocation();
                 case SyntaxKind.PackOffsetLocation:
                     return new BoundPackOffsetLocation();
+                case SyntaxKind.PayloadAccessQualifier:
+                    // DXR payload access qualifiers carry no semantics for the language service.
+                    return new BoundPayloadAccessQualifier();
                 default:
                     throw new ArgumentOutOfRangeException(syntax.Kind.ToString());
             }

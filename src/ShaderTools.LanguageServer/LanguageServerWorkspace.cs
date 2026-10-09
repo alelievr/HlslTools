@@ -24,13 +24,22 @@ namespace ShaderTools.LanguageServer
             return CurrentDocuments.GetDocumentWithFilePath(Helpers.FromUri(uri));
         }
 
+        /// <summary>
+        /// Resolves a document + position from an LSP request. Returns a null document if the
+        /// document was never opened (or has been closed); callers must check. The position is
+        /// clamped to the document, because the editor's copy and ours can briefly disagree about
+        /// its length - a request for a line past the end must not fault.
+        /// </summary>
         public (Document logicalDocument, int position) GetLogicalDocument(TextDocumentPositionParams textDocumentPositionParams)
         {
             var document = GetDocument(textDocumentPositionParams.TextDocument.Uri);
 
-            var documentPosition = document.SourceText.Lines.GetPosition(new LinePosition(
-                textDocumentPositionParams.Position.Line,
-                textDocumentPositionParams.Position.Character));
+            if (document == null)
+            {
+                return (null, 0);
+            }
+
+            var documentPosition = Helpers.ToPosition(document.SourceText, textDocumentPositionParams.Position);
 
             return (document, documentPosition);
         }
@@ -47,9 +56,8 @@ namespace ShaderTools.LanguageServer
             return document;
         }
 
-        public Document UpdateDocument(Document document, IEnumerable<TextChange> changes)
+        public Document UpdateDocument(Document document, SourceText newText)
         {
-            var newText = document.SourceText.WithChanges(changes);
             OnDocumentTextChanged(document.Id, newText);
             return CurrentDocuments.GetDocument(document.Id);
         }

@@ -26,6 +26,10 @@ namespace ShaderTools.LanguageServer.Handlers
         public async Task<SymbolInformationOrDocumentSymbolContainer> Handle(DocumentSymbolParams request, CancellationToken token)
         {
             var document = _workspace.GetDocument(request.TextDocument.Uri);
+            if (document == null)
+            {
+                return new SymbolInformationOrDocumentSymbolContainer();
+            }
 
             var searchService = _workspace.Services.GetService<INavigateToSearchService>();
 
